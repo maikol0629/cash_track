@@ -8,15 +8,18 @@ const prisma = new PrismaClient();
 
 // Configuración principal de Better Auth, usando Prisma como adaptador
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: 'postgresql',
-  }),
-  socialProviders: {
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+    // Prioridad 1: La URL manual de producción
+    // Prioridad 2: La URL automática que Vercel inyecta en cada despliegue
+    // Prioridad 3: Localhost para desarrollo
+    baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || 
+             (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
+    
+    socialProviders: {
+        github: {
+            clientId: process.env.GITHUB_CLIENT_ID!,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+        },
     },
-  },
 });
 
 // Role type aligned with the Prisma enum and business rules
