@@ -1,4 +1,5 @@
 import { useRouter } from 'next/router';
+import { useState } from 'react';
 import { authClient } from '@/lib/auth/client';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/hooks/useSession';
@@ -6,12 +7,14 @@ import { useSession } from '@/lib/hooks/useSession';
 const LoginPage = () => {
   const router = useRouter();
   const { session, isLoading } = useSession();
+  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleSignIn = async () => {
     try {
+      setIsSigningIn(true);
       const { data, error } = await authClient.signIn.social({
         provider: 'github',
-        callbackURL: '/transactions',
+        callbackURL: '/movements',
       });
 
       if (error) {
@@ -26,11 +29,13 @@ const LoginPage = () => {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('GitHub sign-in failed', error);
+    } finally {
+      setIsSigningIn(false);
     }
   };
 
   if (!isLoading && session) {
-    void router.replace('/transactions');
+    void router.replace('/movements');
     return null;
   }
 
@@ -40,7 +45,9 @@ const LoginPage = () => {
       <p className='text-sm text-muted-foreground'>
         Usa tu cuenta de GitHub para acceder a la aplicación.
       </p>
-      <Button onClick={handleSignIn}>Continuar con GitHub</Button>
+      <Button onClick={handleSignIn} disabled={isSigningIn || isLoading}>
+        {isSigningIn || isLoading ? 'Conectando con GitHub…' : 'Continuar con GitHub'}
+      </Button>
     </main>
   );
 };

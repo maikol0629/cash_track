@@ -13,6 +13,7 @@ export const RoleGuard = ({
   allowedRoles,
   fallback,
 }: RoleGuardProps) => {
+  // Reutiliza el hook de sesión actual para decidir qué mostrar en el cliente
   const { user, isLoading, error } = useCurrentUser();
 
   if (isLoading) {
@@ -29,6 +30,7 @@ export const RoleGuard = ({
     );
   }
 
+  // Si no hay usuario autenticado se bloquea el acceso al contenido protegido
   if (!user) {
     return (
       fallback ?? (
@@ -39,6 +41,7 @@ export const RoleGuard = ({
     );
   }
 
+  // Si el usuario no tiene uno de los roles permitidos también se bloquea
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return (
       fallback ?? (

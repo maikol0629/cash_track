@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { TransactionsTable } from '@/components/transactions/TransactionsTable';
-import { TransactionFormModal } from '@/components/transactions/TransactionFormModal';
+import { MovementsTable } from '@/components/movements/MovementsTable';
+import { MovementFormModal } from '@/components/movements/MovementFormModal';
 
-const TransactionsPage = () => {
+const MovementsPage = () => {
   const [open, setOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -22,8 +22,8 @@ const TransactionsPage = () => {
             </p>
           </div>
         </header>
-        <TransactionsTable key={refreshKey} onNew={() => setOpen(true)} />
-        <TransactionFormModal
+        <MovementsTable key={refreshKey} onNew={() => setOpen(true)} />
+        <MovementFormModal
           open={open}
           onOpenChange={setOpen}
           onCreated={handleCreated}
@@ -33,4 +33,4 @@ const TransactionsPage = () => {
   );
 };
 
-export default TransactionsPage;
+export default MovementsPage;

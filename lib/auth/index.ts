@@ -3,8 +3,10 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 
+// Cliente Prisma compartido para el adaptador de Better Auth
 const prisma = new PrismaClient();
 
+// Configuración principal de Better Auth, usando Prisma como adaptador
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
@@ -31,6 +33,7 @@ export type AuthSession = Omit<BaseAuthSession, 'user'> & {
   user: SessionUser;
 };
 
+// Convierte los headers de Next en un objeto Headers estándar para Better Auth
 const createHeadersFromRequest = (req: NextApiRequest): Headers => {
   const headers = new Headers();
 
@@ -47,6 +50,7 @@ const createHeadersFromRequest = (req: NextApiRequest): Headers => {
   return headers;
 };
 
+// Obtiene la sesión del usuario a partir de la request de Next.js
 export const getServerSession = async (
   req: NextApiRequest
 ): Promise<AuthSession | null> => {
@@ -65,6 +69,7 @@ type HandlerWithAuth = (
   res: NextApiResponse
 ) => unknown | Promise<unknown>;
 
+// Envuelve un handler de API y garantiza que llegue una sesión en req.auth
 export const withAuth = (
   handler: HandlerWithAuth,
   options: { required?: boolean } = { required: true }
@@ -92,6 +97,7 @@ export const withAuth = (
   return wrapped;
 };
 
+// Envuelve un handler y verifica que el usuario tenga alguno de los roles permitidos
 export const withRole = (
   roles: Role | Role[],
   handler: HandlerWithAuth
@@ -104,6 +110,7 @@ export const withRole = (
     let effectiveRole: Role | undefined;
 
     try {
+      // Se intenta consultar el rol más reciente directamente en base de datos
       const dbUser = await prisma.user.findUnique({
         where: { id: req.auth.user.id },
         select: { role: true },
@@ -112,7 +119,7 @@ export const withRole = (
       effectiveRole = (dbUser?.role as Role | undefined) ??
         (req.auth.user.role as Role | undefined);
     } catch {
-      // En caso de error, caer de vuelta al rol de la sesión
+      // En caso de error al consultar BD, se usa el rol de la sesión
       effectiveRole = req.auth.user.role as Role | undefined;
     }
 

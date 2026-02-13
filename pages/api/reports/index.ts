@@ -52,6 +52,7 @@ const handler = async (
   _req: AuthenticatedRequest,
   res: NextApiResponse
 ): Promise<void> => {
+  // Obtiene todos los movimientos para calcular totales y agregados mensuales
   const movements = await prisma.movement.findMany({
     select: {
       amount: true,
@@ -66,6 +67,7 @@ const handler = async (
 
   const byMonth: Record<string, { income: number; expense: number }> = {};
 
+  // Para cada movimiento se acumulan totales globales y por mes (YYYY-MM)
   movements.forEach(
     (movement: { amount: unknown; type: 'INCOME' | 'EXPENSE'; date: Date }) => {
       const amount = Number(movement.amount);
@@ -92,6 +94,7 @@ const handler = async (
     }
   );
 
+  // Se transforma el mapa en un arreglo ordenado por mes para enviar al frontend
   const monthly: MonthlyAggregate[] = Object.entries(byMonth)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, value]) => ({ month, ...value }));

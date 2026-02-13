@@ -36,14 +36,15 @@ type SortField = 'date' | 'amount' | 'concept';
 
 type SortDirection = 'asc' | 'desc';
 
-interface TransactionsTableProps {
+interface MovementsTableProps {
   onNew?: () => void;
 }
 
-export const TransactionsTable = ({ onNew }: TransactionsTableProps) => {
+export const MovementsTable = ({ onNew }: MovementsTableProps) => {
   const { user, isLoading, error } = useCurrentUser();
   const isAdmin: boolean = (user?.role as Role | undefined) === "ADMIN";
   const [items, setItems] = useState<Movement[]>([]);
+  const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>(
     'ALL'
@@ -53,10 +54,15 @@ export const TransactionsTable = ({ onNew }: TransactionsTableProps) => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch('/api/movements');
-      if (!res.ok) return;
-      const json: ApiResponse = await res.json();
-      setItems(json.data);
+      try {
+        setIsLoadingMovements(true);
+        const res = await fetch('/api/movements');
+        if (!res.ok) return;
+        const json: ApiResponse = await res.json();
+        setItems(json.data);
+      } finally {
+        setIsLoadingMovements(false);
+      }
     };
 
     void fetchData();
@@ -102,7 +108,11 @@ export const TransactionsTable = ({ onNew }: TransactionsTableProps) => {
   };
 
   if (isLoading) {
-    return <div>Cargando...</div>;
+    return (
+      <section className='flex min-h-[200px] items-center justify-center'>
+        <div className='text-sm text-muted-foreground'>Cargando usuario…</div>
+      </section>
+    );
   }
 
   if (error) {
@@ -163,7 +173,28 @@ export const TransactionsTable = ({ onNew }: TransactionsTableProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAndSorted.map((movement) => (
+            {isLoadingMovements && (
+              <>
+                {[1, 2, 3].map((key) => (
+                  <TableRow key={key}>
+                    <TableCell>
+                      <div className='h-4 w-32 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell className='text-right'>
+                      <div className='ml-auto h-4 w-16 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell>
+                      <div className='h-4 w-24 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell>
+                      <div className='h-4 w-40 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </>
+            )}
+            {!isLoadingMovements &&
+              filteredAndSorted.map((movement) => (
               <TableRow key={movement.id}>
                 <TableCell>{movement.concept}</TableCell>
                 <TableCell className='text-right'>
@@ -178,7 +209,7 @@ export const TransactionsTable = ({ onNew }: TransactionsTableProps) => {
                 </TableCell>
               </TableRow>
             ))}
-            {filteredAndSorted.length === 0 && (
+            {!isLoadingMovements && filteredAndSorted.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={4}

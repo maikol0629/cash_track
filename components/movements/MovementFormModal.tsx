@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormActions } from '@/components/ui/form';
 
+// Esquema de validación del formulario de creación de movimiento
 const schema = z.object({
   concept: z.string().min(1, 'El concepto es requerido'),
   // If the value comes as string from the input, coerce it:
@@ -15,22 +16,23 @@ const schema = z.object({
   type: z.enum(['INCOME', 'EXPENSE']),
 });
 
-type TransactionFormValues = z.infer<typeof schema>;
+type MovementFormValues = z.infer<typeof schema>;
 
-interface TransactionFormModalProps {
+interface MovementFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
 }
 
-export const TransactionFormModal = ({
+// Modal responsable de crear un nuevo movimiento vía /api/movements
+export const MovementFormModal = ({
   open,
   onOpenChange,
   onCreated,
-}: TransactionFormModalProps) => {
+}: MovementFormModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<TransactionFormValues>({
+  const form = useForm<MovementFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       concept: '',
@@ -44,7 +46,8 @@ export const TransactionFormModal = ({
     formState: { errors },
   } = form;
 
-  const handleSubmit = async (values: TransactionFormValues) => {
+  // Envía el formulario al backend y cierra el modal al crear correctamente
+  const handleSubmit = async (values: MovementFormValues) => {
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/movements', {

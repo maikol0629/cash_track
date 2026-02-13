@@ -47,13 +47,13 @@ const Home = () => {
       {isLoading && <p>Cargando sesión...</p>}
 
       {!session && !isLoading && (
-        <button
+        <Button
           type='button'
           onClick={handleSignIn}
           className='px-4 py-2 rounded bg-black text-white hover:bg-zinc-800'
         >
           Iniciar sesión con GitHub
-        </button>
+        </Button>
       )}
 
       {session && user && (

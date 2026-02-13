@@ -67,7 +67,7 @@ const ReportsPage = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'transactions-report.csv';
+      a.download = 'movements-report.csv';
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -81,7 +81,37 @@ const ReportsPage = () => {
 
   const renderContent = () => {
     if (isLoading) {
-      return <p className="text-center">Cargando reporte...</p>;
+      return (
+        <div className="mx-auto max-w-6xl space-y-6 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-6 w-40 animate-pulse rounded bg-muted" />
+              <div className="mt-2 h-4 w-64 animate-pulse rounded bg-muted" />
+            </div>
+            <div className="h-9 w-32 animate-pulse rounded bg-muted" />
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            {[1, 2, 3].map((key) => (
+              <div
+                key={key}
+                className="rounded-lg border bg-white p-4 shadow-sm"
+              >
+                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                <div className="mt-3 h-7 w-28 animate-pulse rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+
+          <div className="h-80 rounded-lg border bg-white p-4 shadow-sm">
+            <div className="h-full w-full animate-pulse rounded bg-muted" />
+          </div>
+
+          <div className="h-80 rounded-lg border bg-white p-4 shadow-sm">
+            <div className="h-full w-full animate-pulse rounded bg-muted" />
+          </div>
+        </div>
+      );
     }
 
     if (error) {

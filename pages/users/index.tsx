@@ -48,6 +48,7 @@ const UsersPage = () => {
     },
   });
 
+  // Carga inicial de usuarios visibles para el administrador
   const loadUsers = async () => {
     setIsLoading(true);
     setError(null);
@@ -72,6 +73,7 @@ const UsersPage = () => {
     void loadUsers();
   }, []);
 
+  // Abre el modal de edición precargando los datos del usuario seleccionado
   const openEditDialog = (user: User) => {
     setSelectedUser(user);
     formMethods.reset({
@@ -86,6 +88,7 @@ const UsersPage = () => {
     setSelectedUser(null);
   };
 
+  // Envía los cambios de nombre y rol al backend y actualiza el listado en memoria
   const handleSubmit = async (values: EditUserFormValues) => {
     if (!selectedUser) return;
 
