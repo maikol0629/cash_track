@@ -31,9 +31,7 @@ interface CurrentUserProviderProps {
   children: ReactNode;
 }
 
-export const CurrentUserProvider = ({
-  children,
-}: CurrentUserProviderProps) => {
+export const CurrentUserProvider = ({ children }: CurrentUserProviderProps) => {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);

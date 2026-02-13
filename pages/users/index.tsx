@@ -12,11 +12,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Dialog, DialogHeader } from '@/components/ui/dialog';
-import {
-  Form,
-  FormField,
-  FormActions,
-} from '@/components/ui/form';
+import { Form, FormField, FormActions } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import type { Role } from '@/lib/auth';
 
@@ -125,33 +121,33 @@ const UsersPage = () => {
 
   const renderContent = () => {
     if (isLoading) {
-      return <p className="text-center">Cargando usuarios...</p>;
+      return <p className='text-center'>Cargando usuarios...</p>;
     }
 
     if (error) {
       return (
-        <p className="text-center text-red-500">
+        <p className='text-center text-red-500'>
           Ocurrió un error al cargar usuarios: {error}
         </p>
       );
     }
 
     if (users.length === 0) {
-      return <p className="text-center">No hay usuarios registrados.</p>;
+      return <p className='text-center'>No hay usuarios registrados.</p>;
     }
 
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className='space-y-6'>
+        <div className='flex items-center justify-between'>
           <div>
-            <h1 className="text-2xl font-semibold">Gestión de usuarios</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className='text-2xl font-semibold'>Gestión de usuarios</h1>
+            <p className='text-sm text-gray-500'>
               Solo los administradores pueden ver y editar usuarios.
             </p>
           </div>
         </div>
 
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
+        <div className='rounded-lg border bg-white p-4 shadow-sm'>
           <Table>
             <TableHeader>
               <TableRow>
@@ -159,7 +155,7 @@ const UsersPage = () => {
                 <TableHead>Correo</TableHead>
                 <TableHead>Teléfono</TableHead>
                 <TableHead>Rol</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className='text-right'>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -169,8 +165,12 @@ const UsersPage = () => {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.phone ?? '—'}</TableCell>
                   <TableCell>{user.role}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={() => openEditDialog(user)}>
+                  <TableCell className='text-right'>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      onClick={() => openEditDialog(user)}
+                    >
                       Editar
                     </Button>
                   </TableCell>
@@ -188,39 +188,38 @@ const UsersPage = () => {
   return (
     <MainLayout>
       <RoleGuard allowedRoles={['ADMIN']}>
-        <main className="mx-auto max-w-5xl py-6">
+        <main className='mx-auto max-w-5xl py-6'>
           {renderContent()}
 
-          <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeDialog()}>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => !open && closeDialog()}
+          >
             <DialogHeader
-              title="Editar usuario"
-              description="Actualiza el nombre y el rol del usuario."
+              title='Editar usuario'
+              description='Actualiza el nombre y el rol del usuario.'
             />
             <Form methods={formMethods} onSubmit={handleSubmit}>
               <FormField
-                label="Nombre"
-                name="name"
-                error={
-                  formMethods.formState.errors.name?.message as string | undefined
-                }
+                label='Nombre'
+                name='name'
+                error={formMethods.formState.errors.name?.message ?? undefined}
               >
                 <Input
-                  id="name"
+                  id='name'
                   {...formMethods.register('name')}
-                  placeholder="Nombre del usuario"
+                  placeholder='Nombre del usuario'
                 />
               </FormField>
 
               <FormField
-                label="Rol"
-                name="role"
-                error={
-                  formMethods.formState.errors.role?.message as string | undefined
-                }
+                label='Rol'
+                name='role'
+                error={formMethods.formState.errors.role?.message ?? undefined}
               >
                 <select
-                  id="role"
-                  className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  id='role'
+                  className='mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                   {...formMethods.register('role')}
                 >
                   {roleOptions.map((role) => (
@@ -232,10 +231,10 @@ const UsersPage = () => {
               </FormField>
 
               <FormActions>
-                <Button type="button" variant="ghost" onClick={closeDialog}>
+                <Button type='button' variant='ghost' onClick={closeDialog}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSaving}>
+                <Button type='submit' disabled={isSaving}>
                   {isSaving ? 'Guardando...' : 'Guardar cambios'}
                 </Button>
               </FormActions>

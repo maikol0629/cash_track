@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import type { Role } from '@/lib/auth';
-import { is } from 'zod/locales';
 
 interface MovementUser {
   id: string;
@@ -42,7 +41,7 @@ interface MovementsTableProps {
 
 export const MovementsTable = ({ onNew }: MovementsTableProps) => {
   const { user, isLoading, error } = useCurrentUser();
-  const isAdmin: boolean = (user?.role as Role | undefined) === "ADMIN";
+  const isAdmin: boolean = (user?.role as Role | undefined) === 'ADMIN';
   const [items, setItems] = useState<Movement[]>([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(true);
   const [search, setSearch] = useState('');
@@ -141,10 +140,11 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
             <option value='EXPENSE'>Egresos</option>
           </select>
         </div>
-
-  
-  {isAdmin && <Button onClick={onNew} className="border-2 border-red-500">Nuevo movimiento</Button>}
-
+        {isAdmin && (
+          <Button onClick={onNew} className='border-2 border-red-500'>
+            Nuevo movimiento
+          </Button>
+        )}
       </div>
 
       <div className='overflow-x-auto rounded-md border'>
@@ -195,20 +195,20 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
             )}
             {!isLoadingMovements &&
               filteredAndSorted.map((movement) => (
-              <TableRow key={movement.id}>
-                <TableCell>{movement.concept}</TableCell>
-                <TableCell className='text-right'>
-                  {movement.type === 'EXPENSE' ? '-' : ''}
-                  {Number(movement.amount).toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  {new Date(movement.date).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  {movement.user.name ?? movement.user.email}
-                </TableCell>
-              </TableRow>
-            ))}
+                <TableRow key={movement.id}>
+                  <TableCell>{movement.concept}</TableCell>
+                  <TableCell className='text-right'>
+                    {movement.type === 'EXPENSE' ? '-' : ''}
+                    {Number(movement.amount).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(movement.date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {movement.user.name ?? movement.user.email}
+                  </TableCell>
+                </TableRow>
+              ))}
             {!isLoadingMovements && filteredAndSorted.length === 0 && (
               <TableRow>
                 <TableCell
@@ -216,8 +216,6 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
                   className='text-center text-sm text-muted-foreground'
                 >
                   No hay movimientos para mostrar.
-                  {user?.role }
-                  
                 </TableCell>
               </TableRow>
             )}

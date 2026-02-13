@@ -46,7 +46,9 @@ const LoginPage = () => {
         Usa tu cuenta de GitHub para acceder a la aplicación.
       </p>
       <Button onClick={handleSignIn} disabled={isSigningIn || isLoading}>
-        {isSigningIn || isLoading ? 'Conectando con GitHub…' : 'Continuar con GitHub'}
+        {isSigningIn || isLoading
+          ? 'Conectando con GitHub…'
+          : 'Continuar con GitHub'}
       </Button>
     </main>
   );

@@ -116,7 +116,8 @@ export const withRole = (
         select: { role: true },
       });
 
-      effectiveRole = (dbUser?.role as Role | undefined) ??
+      effectiveRole =
+        (dbUser?.role as Role | undefined) ??
         (req.auth.user.role as Role | undefined);
     } catch {
       // En caso de error al consultar BD, se usa el rol de la sesión

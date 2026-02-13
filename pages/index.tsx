@@ -64,10 +64,7 @@ const Home = () => {
           </div>
 
           <nav className='flex flex-col items-center gap-2'>
-            <Link
-              href='/movements'
-              className='text-blue-600 hover:underline'
-            >
+            <Link href='/movements' className='text-blue-600 hover:underline'>
               Sistema de ingresos y egresos
             </Link>
             {isAdmin && (
