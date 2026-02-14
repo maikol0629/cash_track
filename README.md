@@ -46,7 +46,7 @@ Aplicación fullstack para la gestión de ingresos y egresos, administración de
 - `prisma/`
   - `schema.prisma`: definición del modelo de datos (usuarios, movimientos, etc.).
 
-## Endpoints principales
+## Endpoints
 
 - `GET /api/me`: devuelve el usuario autenticado.
 - `GET /api/movements`: lista paginada de movimientos (ADMIN ve todos, USER solo los propios).
@@ -77,7 +77,7 @@ DIRECT_URL=...          # conexión directa para migraciones Prisma
 GITHUB_CLIENT_ID=...
 GITHUB_CLIENT_SECRET=...
 BETTER_AUTH_SECRET=...
-NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000/api/auth
+NEXT_PUBLIC_BETTER_AUTH_URL=
 ```
 
 ### Instalación y desarrollo
