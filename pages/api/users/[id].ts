@@ -134,6 +134,105 @@ interface UpdateUserBody {
  *         description: Método no permitido.
  */
 
+const handlePatch = async (
+  userId: string,
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+): Promise<void> => {
+  const { name, role } = req.body as UpdateUserBody;
+
+  const data: { name?: string | null; role?: Role } = {};
+
+  if (typeof name === 'string') {
+    data.name = name.trim();
+  }
+
+  if (role !== undefined) {
+    if (role === 'USER' || role === 'ADMIN') {
+      data.role = role as Role;
+    } else {
+      res.status(400).json({ message: 'Invalid role value' });
+      return;
+    }
+  }
+
+  if (Object.keys(data).length === 0) {
+    res.status(400).json({ message: 'No valid fields to update' });
+    return;
+  }
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+      },
+    });
+
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Record to update not found')
+    ) {
+      res.status(404).json({
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+      return;
+    }
+
+    res.status(500).json({
+      message: 'Internal server error',
+      code: 'DATABASE_ERROR',
+    });
+  }
+};
+
+const handleDelete = async (
+  userId: string,
+  res: NextApiResponse
+): Promise<void> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true },
+  });
+
+  if (!user) {
+    res.status(404).json({ message: 'User not found' });
+    return;
+  }
+
+  if (user.role === 'ADMIN') {
+    const adminCount = await prisma.user.count({
+      where: { role: 'ADMIN' },
+    });
+
+    if (adminCount <= 1) {
+      res.status(400).json({ message: 'Cannot delete the last admin user' });
+      return;
+    }
+  }
+
+  try {
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    res.status(204).end();
+  } catch {
+    res.status(500).json({
+      message: 'Internal server error',
+      code: 'DATABASE_ERROR',
+    });
+  }
+};
+
 const handler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
@@ -147,75 +246,12 @@ const handler = async (
   }
 
   if (req.method === 'PATCH') {
-    const { name, role } = req.body as UpdateUserBody;
-
-    const data: { name?: string | null; role?: Role } = {};
-
-    if (typeof name === 'string') {
-      data.name = name.trim();
-    }
-
-    if (role !== undefined) {
-      if (role === 'USER' || role === 'ADMIN') {
-        data.role = role as Role;
-      } else {
-        res.status(400).json({ message: 'Invalid role value' });
-        return;
-      }
-    }
-
-    if (Object.keys(data).length === 0) {
-      res.status(400).json({ message: 'No valid fields to update' });
-      return;
-    }
-
-    try {
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data,
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          role: true,
-        },
-      });
-
-      res.status(200).json(updatedUser);
-    } catch {
-      res.status(404).json({ message: 'User not found' });
-    }
+    await handlePatch(userId, req, res);
     return;
   }
 
   if (req.method === 'DELETE') {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, role: true },
-    });
-
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-
-    if (user.role === 'ADMIN') {
-      const adminCount = await prisma.user.count({
-        where: { role: 'ADMIN' },
-      });
-
-      if (adminCount <= 1) {
-        res.status(400).json({ message: 'Cannot delete the last admin user' });
-        return;
-      }
-    }
-
-    await prisma.user.delete({
-      where: { id: userId },
-    });
-
-    res.status(204).end();
+    await handleDelete(userId, res);
     return;
   }
 

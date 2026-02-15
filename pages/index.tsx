@@ -40,33 +40,6 @@ const HomePage: React.FC = () => {
             </div>
           </section>
 
-          {/* Resumen rápido (placeholder, listo para conectar a API) */}
-          <section className='space-y-3'>
-            <h2 className='text-sm font-medium text-muted-foreground'>
-              Resumen financiero rápido
-            </h2>
-            <div className='grid gap-4 md:grid-cols-3'>
-              <SummaryCard
-                label='Saldo actual'
-                value='$ 0'
-                description='Disponible actualmente'
-                accent='primary'
-              />
-              <SummaryCard
-                label='Ingresos del mes'
-                value='$ 0'
-                description='Total de ingresos registrados'
-                accent='emerald'
-              />
-              <SummaryCard
-                label='Egresos del mes'
-                value='$ 0'
-                description='Total de egresos registrados'
-                accent='rose'
-              />
-            </div>
-          </section>
-
           {/* Navegación principal */}
           <section className='space-y-4'>
             <h2 className='text-sm font-medium text-muted-foreground'>
@@ -143,44 +116,6 @@ const HomePage: React.FC = () => {
   );
 };
 
-interface SummaryCardProps {
-  label: string;
-  value: string;
-  description: string;
-  accent: 'primary' | 'emerald' | 'rose';
-}
-
-const SummaryCard: React.FC<SummaryCardProps> = ({
-  label,
-  value,
-  description,
-  accent,
-}) => {
-  const accentColor =
-    accent === 'emerald'
-      ? 'bg-emerald-500/15 text-emerald-600'
-      : accent === 'rose'
-        ? 'bg-rose-500/15 text-rose-600'
-        : 'bg-primary/10 text-primary';
-
-  return (
-    <div className='group rounded-xl border bg-card/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-[1px] hover:border-primary/40 hover:shadow-md'>
-      <div className='flex items-center justify-between'>
-        <span className='text-xs font-medium text-muted-foreground'>
-          {label}
-        </span>
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${accentColor}`}
-        >
-          Hoy
-        </span>
-      </div>
-      <div className='mt-2 text-xl font-semibold tabular-nums'>{value}</div>
-      <p className='mt-1 text-xs text-muted-foreground'>{description}</p>
-    </div>
-  );
-};
-
 interface FeatureCardProps {
   title: string;
   subtitle: string;
@@ -196,12 +131,18 @@ const FeatureCard: React.FC<FeatureCardProps> = ({
   badgeVariant = 'default',
   children,
 }) => {
-  const badgeClasses =
-    badgeVariant === 'warning'
-      ? 'bg-amber-100 text-amber-800'
-      : badgeVariant === 'info'
-        ? 'bg-sky-100 text-sky-800'
-        : 'bg-primary/10 text-primary';
+  const getBadgeClasses = (variant: 'default' | 'warning' | 'info'): string => {
+    switch (variant) {
+      case 'warning':
+        return 'bg-amber-100 text-amber-800';
+      case 'info':
+        return 'bg-sky-100 text-sky-800';
+      case 'default':
+        return 'bg-primary/10 text-primary';
+    }
+  };
+
+  const badgeClasses = getBadgeClasses(badgeVariant);
 
   return (
     <article className='group flex h-full flex-col rounded-xl border bg-card/80 p-4 shadow-sm transition-all duration-200 hover:-translate-y-[2px] hover:border-primary/40 hover:shadow-md'>

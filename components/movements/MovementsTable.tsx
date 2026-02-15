@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Table,
   TableHeader,
@@ -17,9 +17,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Pencil, Trash2, PlusCircle } from 'lucide-react';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
-import type { Role } from '@/lib/auth';
 import { MovementEditModal } from '@/components/movements/MovementEditModal';
 import { MovementDeleteDialog } from '@/components/movements/MovementDeleteDialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface MovementUser {
   id: string;
@@ -50,7 +50,7 @@ interface MovementsTableProps {
 
 export const MovementsTable = ({ onNew }: MovementsTableProps) => {
   const { user, isLoading, error } = useCurrentUser();
-  const isAdmin: boolean = (user?.role as Role | undefined) === 'ADMIN';
+  const isAdmin: boolean = user?.role === 'ADMIN';
   const [items, setItems] = useState<Movement[]>([]);
   const [isLoadingMovements, setIsLoadingMovements] = useState<boolean>(true);
   const [search, setSearch] = useState('');
@@ -67,21 +67,42 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
   );
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const loadMovements = async () => {
+  const { toast } = useToast();
+
+  const loadMovements = useCallback(async () => {
     try {
       setIsLoadingMovements(true);
       const res = await fetch('/api/movements');
-      if (!res.ok) return;
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({
+          message: 'Error al cargar los movimientos',
+        }));
+
+        toast({
+          title: 'Error',
+          description: error.message || 'No se pudieron cargar los movimientos',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const json: ApiResponse = await res.json();
       setItems(json.data);
+    } catch {
+      toast({
+        title: 'Error de conexión',
+        description: 'No se pudo conectar con el servidor',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoadingMovements(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     void loadMovements();
-  }, []);
+  }, [loadMovements]);
 
   const filteredAndSorted = useMemo(() => {
     const term = search.toLowerCase();
@@ -142,6 +163,17 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
 
   if (error) {
     return <div>Error: {error}</div>;
+  }
+
+  if (isLoadingMovements && items.length === 0) {
+    return (
+      <div className='space-y-3'>
+        <div className='h-10 w-full animate-pulse rounded bg-muted' />
+        <div className='h-10 w-full animate-pulse rounded bg-muted' />
+        <div className='h-10 w-full animate-pulse rounded bg-muted' />
+        <div className='h-10 w-full animate-pulse rounded bg-muted' />
+      </div>
+    );
   }
 
   return (
@@ -310,6 +342,7 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
             id: movementToDelete.id,
             concept: movementToDelete.concept,
             amount: movementToDelete.amount,
+            type: movementToDelete.type,
           }}
           onDeleted={loadMovements}
         />

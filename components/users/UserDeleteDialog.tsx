@@ -40,21 +40,15 @@ export const UserDeleteDialog = ({
         method: 'DELETE',
       });
 
-      if (res.status === 400) {
-        const body = (await res.json()) as { message?: string };
-        toast({
-          title: 'No se puede eliminar',
-          description:
-            body.message ?? 'No se puede eliminar el último usuario admin.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
       if (!res.ok) {
+        const error = await res.json().catch(() => ({
+          message: 'No se pudo eliminar el usuario',
+        }));
+
         toast({
-          title: 'Error al eliminar',
-          description: 'No se pudo eliminar el usuario.',
+          title:
+            res.status === 400 ? 'No se puede eliminar' : 'Error al eliminar',
+          description: error.message || 'No se pudo eliminar el usuario.',
           variant: 'destructive',
         });
         return;
@@ -70,8 +64,8 @@ export const UserDeleteDialog = ({
       onOpenChange(false);
     } catch {
       toast({
-        title: 'Error inesperado',
-        description: 'Ocurrió un error al eliminar el usuario.',
+        title: 'Error de conexión',
+        description: 'No se pudo conectar con el servidor.',
         variant: 'destructive',
       });
     } finally {

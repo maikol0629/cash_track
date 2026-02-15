@@ -5,7 +5,7 @@ import { renderWithProviders } from '../test-utils/render';
 
 const mockFetch = jest.fn();
 
-global.fetch = mockFetch as unknown as typeof fetch;
+globalThis.fetch = mockFetch as unknown as typeof fetch;
 
 describe('MovementFormModal', () => {
   const setup = () => {
@@ -63,7 +63,10 @@ describe('MovementFormModal', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/movements', expect.anything());
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/movements',
+        expect.anything()
+      );
     });
 
     expect(onOpenChange).toHaveBeenCalledWith(false);

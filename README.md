@@ -22,7 +22,6 @@ Aplicación fullstack para la gestión de ingresos y egresos, administración de
   - UI de documentación embebida con `swagger-ui-react`
   - Pruebas unitarias con Jest y React Testing Library
 
-
 ## Estructura del proyecto
 
 - `pages/`
@@ -138,3 +137,8 @@ El proyecto está preparado para ser desplegado en Vercel:
 - La interfaz está pensada para escritorio, siguiendo la indicación de que no es obligatorio un diseño responsive.
 - El control de acceso se implementa tanto en el backend (middleware `withRole`) como en el frontend (componente `RoleGuard`).
 - Los nuevos usuarios autenticados mediante GitHub se crean con rol `ADMIN` para facilitar la evaluación y el acceso a todas las secciones.
+
+
+## Despliegue
+
+- [text](https://cash-track-rho.vercel.app/)

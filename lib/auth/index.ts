@@ -1,10 +1,9 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 
-// Cliente Prisma compartido para el adaptador de Better Auth
-const prisma = new PrismaClient();
+const DEFAULT_AUTH_OPTIONS = { required: true } as const;
 
 // Configuración principal de Better Auth, usando Prisma como adaptador
 export const auth = betterAuth({
@@ -19,7 +18,7 @@ export const auth = betterAuth({
   },
 });
 
-// Role type aligned with the Prisma enum and business rules
+// Tipos de roles y sesión extendida para incluir el rol del usuario
 export type Role = 'USER' | 'ADMIN';
 
 type BaseAuthSession = NonNullable<
@@ -28,7 +27,7 @@ type BaseAuthSession = NonNullable<
 
 export type SessionUser = BaseAuthSession['user'] & { role: Role };
 
-// Extend the base session type so `user.role` is available in TypeScript
+// La sesión que se usará en la aplicación, con el rol incluido
 export type AuthSession = Omit<BaseAuthSession, 'user'> & {
   user: SessionUser;
 };
@@ -67,12 +66,12 @@ export type AuthenticatedRequest = NextApiRequest & {
 type HandlerWithAuth = (
   req: AuthenticatedRequest,
   res: NextApiResponse
-) => unknown | Promise<unknown>;
+) => void | Promise<void>;
 
 // Envuelve un handler de API y garantiza que llegue una sesión en req.auth
 export const withAuth = (
   handler: HandlerWithAuth,
-  options: { required?: boolean } = { required: true }
+  options: { required?: boolean } = DEFAULT_AUTH_OPTIONS
 ): NextApiHandler => {
   const { required = true } = options;
 
@@ -86,7 +85,7 @@ export const withAuth = (
     }
 
     if (!session) {
-      // Not required and no session; handler decides how to behave
+      // Si no se requiere sesión, se llama al handler sin modificar req.auth
       return handler(req as AuthenticatedRequest, res);
     }
 
@@ -131,5 +130,3 @@ export const withRole = (
     return handler(req, res);
   });
 };
-
-export type Session = AuthSession;

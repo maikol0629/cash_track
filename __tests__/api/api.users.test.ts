@@ -228,14 +228,18 @@ describe('PATCH /api/users/[id] RBAC and validation', () => {
       },
     } as unknown as NextApiRequest;
 
-    prismaMock.user.update.mockRejectedValueOnce(new Error('Not found'));
+    const updateError = new Error('Record to update not found');
+    prismaMock.user.update.mockRejectedValueOnce(updateError);
 
     const res = createMockRes();
 
     await userByIdHandler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ message: 'User not found' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'User not found',
+      code: 'USER_NOT_FOUND',
+    });
   });
 
   it('validates role values and rejects invalid ones with 400', async () => {

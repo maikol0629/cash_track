@@ -27,6 +27,7 @@ interface ReportsResponse {
   totalExpense: number;
   balance: number;
   monthly: MonthlyAggregate[];
+  totalMovements: number;
 }
 
 const ReportsPage = () => {
@@ -61,6 +62,16 @@ const ReportsPage = () => {
   const handleDownloadCsv = async () => {
     try {
       setIsDownloading(true);
+
+      // Advertencia si hay más de 10,000 movimientos
+      if (data && data.totalMovements > 10000) {
+        toast({
+          title: 'Advertencia',
+          description: `El CSV contendrá solo los últimos 10,000 movimientos de ${data.totalMovements} totales.`,
+          variant: 'default',
+        });
+      }
+
       const res = await fetch('/api/reports/csv');
 
       if (!res.ok) {
@@ -68,14 +79,14 @@ const ReportsPage = () => {
       }
 
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = globalThis.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'movements-report.csv';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      globalThis.URL.revokeObjectURL(url);
       toast({
         title: 'Reporte descargado',
         description: 'El archivo CSV se descargó correctamente.',

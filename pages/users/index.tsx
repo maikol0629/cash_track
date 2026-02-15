@@ -222,52 +222,54 @@ const UsersPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name ?? '—'}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.phone ?? '—'}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell className='text-right'>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger>
-                        <Button size='sm' variant='ghost' aria-label='Acciones'>
-                          <MoreHorizontal className='h-4 w-4' />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                          <Pencil className='mr-2 h-4 w-4' />
-                          Editar
-                        </DropdownMenuItem>
-                        {(() => {
-                          const isLastAdmin =
-                            user.role === 'ADMIN' && adminCount === 1;
+              {users.map((user) => {
+                const isLastAdmin = user.role === 'ADMIN' && adminCount === 1;
+                const deleteTooltip = isLastAdmin
+                  ? 'No puedes eliminar el último administrador.'
+                  : undefined;
 
-                          return (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (isLastAdmin) return;
-                                setUserToDelete(user);
-                                setIsDeleteOpen(true);
-                              }}
-                              disabled={isLastAdmin}
-                              title={
-                                isLastAdmin
-                                  ? 'No puedes eliminar el último administrador.'
-                                  : undefined
-                              }
-                            >
-                              <Trash2 className='mr-2 h-4 w-4 text-red-600' />
-                              Eliminar
-                            </DropdownMenuItem>
-                          );
-                        })()}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className='font-medium'>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.phone ?? '—'}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell className='text-right'>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button
+                            size='sm'
+                            variant='ghost'
+                            aria-label='Acciones'
+                          >
+                            <MoreHorizontal className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            onClick={() => openEditDialog(user)}
+                          >
+                            <Pencil className='mr-2 h-4 w-4' />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (isLastAdmin) return;
+                              setUserToDelete(user);
+                              setIsDeleteOpen(true);
+                            }}
+                            disabled={isLastAdmin}
+                            title={deleteTooltip}
+                          >
+                            <Trash2 className='mr-2 h-4 w-4 text-red-600' />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
