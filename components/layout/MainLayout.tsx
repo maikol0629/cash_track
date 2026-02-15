@@ -11,7 +11,6 @@ interface MainLayoutProps {
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const router = useRouter();
   const { user, isLoading } = useCurrentUser();
-
   const isAdmin = user?.role === 'ADMIN';
 
   const handleLogout = async () => {
@@ -32,33 +31,52 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
             )}
           </div>
           <nav className='flex items-center gap-2 text-sm'>
-            <Link href='/movements'>
-              <Button variant='ghost' className='px-3 py-1 text-sm'>
-                Movimientos
-              </Button>
-            </Link>
-            {isAdmin && (
+            {!isLoading && user ? (
               <>
-                <Link href='/users'>
+                <Link href='/'>
                   <Button variant='ghost' className='px-3 py-1 text-sm'>
-                    Usuarios
+                    Inicio
                   </Button>
                 </Link>
-                <Link href='/reports'>
+                <Link href='/movements'>
                   <Button variant='ghost' className='px-3 py-1 text-sm'>
-                    Reportes
+                    Movimientos
                   </Button>
                 </Link>
+
+                {isAdmin && (
+                  <>
+                    <Link href='/users'>
+                      <Button variant='ghost' className='px-3 py-1 text-sm'>
+                        Usuarios
+                      </Button>
+                    </Link>
+                    <Link href='/reports'>
+                      <Button variant='ghost' className='px-3 py-1 text-sm'>
+                        Reportes
+                      </Button>
+                    </Link>
+                  </>
+                )}
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='ml-4'
+                  onClick={handleLogout}
+                >
+                  Cerrar sesión
+                </Button>
               </>
+            ) : (
+              <Button
+                variant='outline'
+                size='sm'
+                className='ml-4'
+                onClick={() => router.push('/login')}
+              >
+                Iniciar sesión
+              </Button>
             )}
-            <Button
-              variant='outline'
-              size='sm'
-              className='ml-4'
-              onClick={handleLogout}
-            >
-              Cerrar sesión
-            </Button>
           </nav>
         </div>
       </header>

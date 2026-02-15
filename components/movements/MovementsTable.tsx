@@ -9,8 +9,17 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Pencil, Trash2, PlusCircle } from 'lucide-react';
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 import type { Role } from '@/lib/auth';
+import { MovementEditModal } from '@/components/movements/MovementEditModal';
+import { MovementDeleteDialog } from '@/components/movements/MovementDeleteDialog';
 
 interface MovementUser {
   id: string;
@@ -51,20 +60,27 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoadingMovements(true);
-        const res = await fetch('/api/movements');
-        if (!res.ok) return;
-        const json: ApiResponse = await res.json();
-        setItems(json.data);
-      } finally {
-        setIsLoadingMovements(false);
-      }
-    };
+  const [movementToEdit, setMovementToEdit] = useState<Movement | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
+    null
+  );
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-    void fetchData();
+  const loadMovements = async () => {
+    try {
+      setIsLoadingMovements(true);
+      const res = await fetch('/api/movements');
+      if (!res.ok) return;
+      const json: ApiResponse = await res.json();
+      setItems(json.data);
+    } finally {
+      setIsLoadingMovements(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadMovements();
   }, []);
 
   const filteredAndSorted = useMemo(() => {
@@ -106,6 +122,16 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
     }
   };
 
+  const handleEditClick = (movement: Movement) => {
+    setMovementToEdit(movement);
+    setIsEditOpen(true);
+  };
+
+  const handleDeleteClick = (movement: Movement) => {
+    setMovementToDelete(movement);
+    setIsDeleteOpen(true);
+  };
+
   if (isLoading) {
     return (
       <section className='flex min-h-[200px] items-center justify-center'>
@@ -141,7 +167,8 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
           </select>
         </div>
         {isAdmin && (
-          <Button onClick={onNew} className='border-2 border-red-500'>
+          <Button onClick={onNew} className='gap-2'>
+            <PlusCircle className='h-4 w-4' />
             Nuevo movimiento
           </Button>
         )}
@@ -170,6 +197,7 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
                 Fecha
               </TableHead>
               <TableHead>Usuario</TableHead>
+              <TableHead className='text-right'>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -189,6 +217,9 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
                     <TableCell>
                       <div className='h-4 w-40 animate-pulse rounded bg-muted' />
                     </TableCell>
+                    <TableCell className='text-right'>
+                      <div className='h-4 w-6 animate-pulse rounded bg-muted' />
+                    </TableCell>
                   </TableRow>
                 ))}
               </>
@@ -207,12 +238,41 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
                   <TableCell>
                     {movement.user.name ?? movement.user.email}
                   </TableCell>
+                  <TableCell className='text-right'>
+                    {(isAdmin || movement.user.id === user?.id) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            aria-label='Acciones'
+                          >
+                            <MoreHorizontal className='h-4 w-4' />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            onClick={() => handleEditClick(movement)}
+                          >
+                            <Pencil className='mr-2 h-4 w-4' />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteClick(movement)}
+                          >
+                            <Trash2 className='mr-2 h-4 w-4 text-red-600' />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             {!isLoadingMovements && filteredAndSorted.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={4}
+                  colSpan={5}
                   className='text-center text-sm text-muted-foreground'
                 >
                   No hay movimientos para mostrar.
@@ -222,6 +282,38 @@ export const MovementsTable = ({ onNew }: MovementsTableProps) => {
           </TableBody>
         </Table>
       </div>
+
+      {movementToEdit && (
+        <MovementEditModal
+          open={isEditOpen}
+          onOpenChange={(open) => {
+            setIsEditOpen(open);
+            if (!open) {
+              setMovementToEdit(null);
+            }
+          }}
+          movement={movementToEdit}
+          onUpdated={loadMovements}
+        />
+      )}
+
+      {movementToDelete && (
+        <MovementDeleteDialog
+          open={isDeleteOpen}
+          onOpenChange={(open) => {
+            setIsDeleteOpen(open);
+            if (!open) {
+              setMovementToDelete(null);
+            }
+          }}
+          movement={{
+            id: movementToDelete.id,
+            concept: movementToDelete.concept,
+            amount: movementToDelete.amount,
+          }}
+          onDeleted={loadMovements}
+        />
+      )}
     </section>
   );
 };

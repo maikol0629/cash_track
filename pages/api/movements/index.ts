@@ -188,9 +188,19 @@ const handler = async (
       return;
     }
 
+    if (req.auth.user.role !== 'ADMIN') {
+      res.status(403).json({ message: 'Forbidden' });
+      return;
+    }
+
     const numericAmount = parseNumber(amount);
     if (numericAmount === null) {
       res.status(400).json({ message: 'Amount must be a valid number' });
+      return;
+    }
+
+    if (numericAmount <= 0) {
+      res.status(400).json({ message: 'Amount must be greater than 0' });
       return;
     }
 
