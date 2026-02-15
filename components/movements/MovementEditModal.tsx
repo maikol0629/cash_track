@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,52 +7,71 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormActions } from '@/components/ui/form';
 import { Save, X } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
-// Esquema de validación del formulario de creación de movimiento
 const schema = z.object({
   concept: z.string().min(1, 'El concepto es requerido'),
-  // If the value comes as string from the input, coerce it:
   amount: z.number().positive('El monto debe ser mayor que 0'),
   date: z.string().min(1, 'La fecha es requerida'),
   type: z.enum(['INCOME', 'EXPENSE']),
 });
 
-type MovementFormValues = z.infer<typeof schema>;
+export type MovementEditFormValues = z.infer<typeof schema>;
 
-interface MovementFormModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreated?: () => void;
+export interface MovementForEdit {
+  id: string;
+  concept: string;
+  amount: number;
+  date: string;
+  type: 'INCOME' | 'EXPENSE';
 }
 
-// Modal responsable de crear un nuevo movimiento vía /api/movements
-export const MovementFormModal = ({
+interface MovementEditModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  movement: MovementForEdit;
+  onUpdated?: () => void;
+}
+
+export const MovementEditModal = ({
   open,
   onOpenChange,
-  onCreated,
-}: MovementFormModalProps) => {
+  movement,
+  onUpdated,
+}: MovementEditModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  const form = useForm<MovementFormValues>({
+  const form = useForm<MovementEditFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      concept: '',
-      amount: 0,
-      date: new Date().toISOString().slice(0, 10),
-      type: 'INCOME',
+      concept: movement.concept,
+      amount: Number(movement.amount),
+      date: movement.date.slice(0, 10),
+      type: movement.type,
     },
   });
+
+  useEffect(() => {
+    if (!open) return;
+
+    form.reset({
+      concept: movement.concept,
+      amount: Number(movement.amount),
+      date: movement.date.slice(0, 10),
+      type: movement.type,
+    });
+  }, [movement, open, form]);
 
   const {
     formState: { errors },
   } = form;
 
-  // Envía el formulario al backend y cierra el modal al crear correctamente
-  const handleSubmit = async (values: MovementFormValues) => {
+  const handleSubmit = async (values: MovementEditFormValues) => {
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/movements', {
-        method: 'POST',
+      const res = await fetch(`/api/movements/${movement.id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -65,14 +84,28 @@ export const MovementFormModal = ({
       });
 
       if (!res.ok) {
-        // eslint-disable-next-line no-console
-        console.error('Error al crear movimiento');
+        toast({
+          title: 'Error al actualizar',
+          description: 'No se pudo actualizar el movimiento.',
+          variant: 'destructive',
+        });
         return;
       }
 
-      form.reset();
+      toast({
+        title: 'Movimiento actualizado',
+        description: 'El movimiento se actualizó correctamente.',
+        variant: 'success',
+      });
+
+      onUpdated?.();
       onOpenChange(false);
-      onCreated?.();
+    } catch {
+      toast({
+        title: 'Error inesperado',
+        description: 'Ocurrió un error al actualizar el movimiento.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -81,8 +114,8 @@ export const MovementFormModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader
-        title='Nuevo movimiento'
-        description='Registra un ingreso o egreso.'
+        title='Editar movimiento'
+        description='Actualiza los datos del movimiento seleccionado.'
       />
       <Form methods={form} onSubmit={handleSubmit}>
         <FormField
@@ -138,7 +171,7 @@ export const MovementFormModal = ({
             ) : (
               <Save className='h-4 w-4' />
             )}
-            {isSubmitting ? 'Guardando...' : 'Guardar'}
+            {isSubmitting ? 'Guardando...' : 'Guardar cambios'}
           </Button>
         </FormActions>
       </Form>

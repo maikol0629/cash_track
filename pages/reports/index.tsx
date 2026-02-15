@@ -14,6 +14,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
+import { useToast } from '@/components/ui/use-toast';
 
 interface MonthlyAggregate {
   month: string; // YYYY-MM
@@ -32,6 +33,8 @@ const ReportsPage = () => {
   const [data, setData] = useState<ReportsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -57,6 +60,7 @@ const ReportsPage = () => {
 
   const handleDownloadCsv = async () => {
     try {
+      setIsDownloading(true);
       const res = await fetch('/api/reports/csv');
 
       if (!res.ok) {
@@ -72,10 +76,22 @@ const ReportsPage = () => {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      toast({
+        title: 'Reporte descargado',
+        description: 'El archivo CSV se descargó correctamente.',
+        variant: 'success',
+      });
     } catch (err) {
-      // For now just log; in a real app we might show a toast
-      // eslint-disable-next-line no-console
-      console.error(err);
+      toast({
+        title: 'Error al descargar',
+        description:
+          err instanceof Error
+            ? err.message
+            : 'Ocurrió un error al descargar el reporte.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -135,7 +151,16 @@ const ReportsPage = () => {
               Resumen de ingresos y egresos mensuales.
             </p>
           </div>
-          <Button onClick={handleDownloadCsv}>Descargar CSV</Button>
+          <Button
+            onClick={handleDownloadCsv}
+            disabled={isDownloading}
+            className='gap-2'
+          >
+            {isDownloading && (
+              <span className='h-3 w-3 animate-spin rounded-full border-[2px] border-current border-r-transparent' />
+            )}
+            {isDownloading ? 'Descargando…' : 'Descargar CSV'}
+          </Button>
         </div>
 
         <div className='grid grid-cols-3 gap-6'>

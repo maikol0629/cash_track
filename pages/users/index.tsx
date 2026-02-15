@@ -15,6 +15,15 @@ import { Dialog, DialogHeader } from '@/components/ui/dialog';
 import { Form, FormField, FormActions } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import type { Role } from '@/lib/auth';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { UserDeleteDialog } from '@/components/users/UserDeleteDialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface User {
   id: string;
@@ -36,6 +45,9 @@ const UsersPage = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
+  const { toast } = useToast();
 
   const formMethods = useForm<EditUserFormValues>({
     defaultValues: {
@@ -68,6 +80,8 @@ const UsersPage = () => {
   useEffect(() => {
     void loadUsers();
   }, []);
+
+  const adminCount = users.filter((u) => u.role === 'ADMIN').length;
 
   // Abre el modal de edición precargando los datos del usuario seleccionado
   const openEditDialog = (user: User) => {
@@ -111,9 +125,14 @@ const UsersPage = () => {
 
       closeDialog();
     } catch (err) {
-      // En un entorno real, mostraríamos un toast de error
-      // eslint-disable-next-line no-console
-      console.error(err);
+      toast({
+        title: 'Error al actualizar',
+        description:
+          err instanceof Error
+            ? err.message
+            : 'No se pudo actualizar el usuario.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -121,7 +140,51 @@ const UsersPage = () => {
 
   const renderContent = () => {
     if (isLoading) {
-      return <p className='text-center'>Cargando usuarios...</p>;
+      return (
+        <div className='space-y-6'>
+          <div className='flex items-center justify-between'>
+            <div>
+              <div className='h-6 w-40 animate-pulse rounded bg-muted' />
+              <div className='mt-2 h-4 w-64 animate-pulse rounded bg-muted' />
+            </div>
+          </div>
+
+          <div className='rounded-lg border bg-white p-4 shadow-sm'>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Correo</TableHead>
+                  <TableHead>Teléfono</TableHead>
+                  <TableHead>Rol</TableHead>
+                  <TableHead className='text-right'>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[1, 2, 3].map((key) => (
+                  <TableRow key={key}>
+                    <TableCell>
+                      <div className='h-4 w-40 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell>
+                      <div className='h-4 w-48 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell>
+                      <div className='h-4 w-28 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell>
+                      <div className='h-4 w-20 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                    <TableCell className='text-right'>
+                      <div className='ml-auto h-4 w-6 animate-pulse rounded bg-muted' />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      );
     }
 
     if (error) {
@@ -166,13 +229,42 @@ const UsersPage = () => {
                   <TableCell>{user.phone ?? '—'}</TableCell>
                   <TableCell>{user.role}</TableCell>
                   <TableCell className='text-right'>
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      onClick={() => openEditDialog(user)}
-                    >
-                      Editar
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button size='sm' variant='ghost' aria-label='Acciones'>
+                          <MoreHorizontal className='h-4 w-4' />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                          <Pencil className='mr-2 h-4 w-4' />
+                          Editar
+                        </DropdownMenuItem>
+                        {(() => {
+                          const isLastAdmin =
+                            user.role === 'ADMIN' && adminCount === 1;
+
+                          return (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (isLastAdmin) return;
+                                setUserToDelete(user);
+                                setIsDeleteOpen(true);
+                              }}
+                              disabled={isLastAdmin}
+                              title={
+                                isLastAdmin
+                                  ? 'No puedes eliminar el último administrador.'
+                                  : undefined
+                              }
+                            >
+                              <Trash2 className='mr-2 h-4 w-4 text-red-600' />
+                              Eliminar
+                            </DropdownMenuItem>
+                          );
+                        })()}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -234,12 +326,31 @@ const UsersPage = () => {
                 <Button type='button' variant='ghost' onClick={closeDialog}>
                   Cancelar
                 </Button>
-                <Button type='submit' disabled={isSaving}>
+                <Button type='submit' disabled={isSaving} className='gap-2'>
+                  {isSaving && (
+                    <span className='h-3 w-3 animate-spin rounded-full border-[2px] border-current border-r-transparent' />
+                  )}
                   {isSaving ? 'Guardando...' : 'Guardar cambios'}
                 </Button>
               </FormActions>
             </Form>
           </Dialog>
+
+          {userToDelete && (
+            <UserDeleteDialog
+              open={isDeleteOpen}
+              onOpenChange={(open) => {
+                setIsDeleteOpen(open);
+                if (!open) {
+                  setUserToDelete(null);
+                }
+              }}
+              user={userToDelete}
+              onDeleted={() => {
+                void loadUsers();
+              }}
+            />
+          )}
         </main>
       </RoleGuard>
     </MainLayout>

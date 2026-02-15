@@ -12,12 +12,14 @@ export const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
 
   return (
     <div
-      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'
+      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in-0'
       onClick={() => onOpenChange(false)}
       role='presentation'
     >
       <div
-        className={cn('w-full max-w-lg rounded-lg bg-background p-6 shadow-lg')}
+        className={cn(
+          'w-full max-w-lg rounded-lg bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-150'
+        )}
         onClick={(e) => e.stopPropagation()}
         role='dialog'
         aria-modal='true'

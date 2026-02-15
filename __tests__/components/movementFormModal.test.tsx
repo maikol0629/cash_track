@@ -1,6 +1,7 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MovementFormModal } from '@/components/movements/MovementFormModal';
+import { renderWithProviders } from '../test-utils/render';
 
 const mockFetch = jest.fn();
 
@@ -11,7 +12,7 @@ describe('MovementFormModal', () => {
     const onOpenChange = jest.fn();
     const onCreated = jest.fn();
 
-    render(
+    renderWithProviders(
       <MovementFormModal
         open
         onOpenChange={onOpenChange}
