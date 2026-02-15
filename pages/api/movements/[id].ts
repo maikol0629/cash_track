@@ -1,4 +1,5 @@
 import type { NextApiResponse } from 'next';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { withAuth, type AuthenticatedRequest } from '@/lib/auth';
 
@@ -9,12 +10,39 @@ interface UpdateMovementBody {
   type?: unknown;
 }
 
+// Schema de validación Zod para actualizar movimientos
+const updateMovementSchema = z
+  .object({
+    concept: z
+      .string()
+      .min(1)
+      .max(200)
+      .transform((val) => val.trim())
+      .refine((val) => !/[<>]/.test(val), {
+        message: 'Concept cannot contain HTML tags',
+      })
+      .optional(),
+    amount: z
+      .number()
+      .positive()
+      .max(999999999, 'Amount exceeds maximum allowed value')
+      .refine((val) => Number.isSafeInteger(val * 100), {
+        message: 'Amount must be a valid monetary value',
+      })
+      .optional(),
+    date: z.string().datetime().optional(),
+    type: z.enum(['INCOME', 'EXPENSE']).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided',
+  });
+
 /**
  * @swagger
  * /api/movements/{id}:
  *   patch:
  *     summary: Actualizar un movimiento
- *     description: Actualiza los campos de un movimiento existente (concepto, monto, fecha y tipo).
+ *     description: Actualiza los campos de un movimiento existente (concepto, monto, fecha y tipo). Los administradores pueden editar cualquier movimiento, los usuarios solo sus propios movimientos.
  *     tags:
  *       - Movements
  *     parameters:
@@ -105,8 +133,14 @@ interface UpdateMovementBody {
  *               properties:
  *                 message:
  *                   type: string
- *             example:
- *               message: "Forbidden"
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               notOwner:
+ *                 summary: Usuario intenta editar movimiento de otro
+ *                 value:
+ *                   message: "Forbidden - You can only modify your own movements"
+ *                   code: "NOT_OWNER"
  *       404:
  *         description: Movimiento no encontrado.
  *         content:
@@ -122,7 +156,7 @@ interface UpdateMovementBody {
  *         description: Método no permitido.
  *   delete:
  *     summary: Eliminar un movimiento
- *     description: Elimina un movimiento existente. Solo el propietario o un administrador pueden eliminarlo.
+ *     description: Elimina un movimiento existente. Los administradores pueden eliminar cualquier movimiento, los usuarios solo sus propios movimientos.
  *     tags:
  *       - Movements
  *     parameters:
@@ -157,8 +191,14 @@ interface UpdateMovementBody {
  *               properties:
  *                 message:
  *                   type: string
- *             example:
- *               message: "Forbidden"
+ *                 code:
+ *                   type: string
+ *             examples:
+ *               notOwner:
+ *                 summary: Usuario intenta eliminar movimiento de otro
+ *                 value:
+ *                   message: "Forbidden - You can only modify your own movements"
+ *                   code: "NOT_OWNER"
  *       404:
  *         description: Movimiento no encontrado.
  *         content:
@@ -174,19 +214,99 @@ interface UpdateMovementBody {
  *         description: Método no permitido.
  */
 
-const parseNumber = (value: unknown): number | null => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+const handlePatch = async (
+  movementId: string,
+  body: UpdateMovementBody,
+  res: NextApiResponse
+): Promise<void> => {
+  const validation = updateMovementSchema.safeParse(body);
+
+  if (!validation.success) {
+    res.status(400).json({
+      message: 'Validation error',
+      errors: validation.error.flatten().fieldErrors,
+    });
+    return;
   }
-  return null;
+
+  const { concept, amount, date, type } = validation.data;
+
+  const data: {
+    concept?: string;
+    amount?: number;
+    date?: Date;
+    type?: 'INCOME' | 'EXPENSE';
+  } = {};
+
+  if (concept !== undefined) {
+    data.concept = concept.trim();
+  }
+
+  if (amount !== undefined) {
+    data.amount = amount;
+  }
+
+  if (date !== undefined) {
+    data.date = new Date(date);
+  }
+
+  if (type !== undefined) {
+    data.type = type;
+  }
+
+  try {
+    const updatedMovement = await prisma.movement.update({
+      where: { id: movementId },
+      data,
+    });
+
+    res.status(200).json(updatedMovement);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Record to update not found')
+    ) {
+      res.status(404).json({
+        message: 'Movement not found',
+        code: 'MOVEMENT_NOT_FOUND',
+      });
+      return;
+    }
+
+    res.status(500).json({
+      message: 'Internal server error',
+      code: 'DATABASE_ERROR',
+    });
+  }
 };
 
-const parseDate = (value: unknown): Date | null => {
-  if (typeof value !== 'string') return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+const handleDelete = async (
+  movementId: string,
+  res: NextApiResponse
+): Promise<void> => {
+  try {
+    await prisma.movement.delete({
+      where: { id: movementId },
+    });
+
+    res.status(204).end();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes('Record to delete does not exist')
+    ) {
+      res.status(404).json({
+        message: 'Movement not found',
+        code: 'MOVEMENT_NOT_FOUND',
+      });
+      return;
+    }
+
+    res.status(500).json({
+      message: 'Internal server error',
+      code: 'DATABASE_ERROR',
+    });
+  }
 };
 
 const handler = async (
@@ -216,79 +336,36 @@ const handler = async (
     return;
   }
 
-  const isAdmin = req.auth.user.role === 'ADMIN';
+  // Verificar rol de admin consultando la base de datos (no confiar solo en la sesión)
+  let isAdmin = false;
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: req.auth.user.id },
+      select: { role: true },
+    });
+    isAdmin = dbUser?.role === 'ADMIN';
+  } catch {
+    isAdmin = req.auth.user.role === 'ADMIN'; // Fallback a la sesión
+  }
+
+  // Verificar permisos: ADMIN puede editar cualquier movimiento, USER solo los propios
   const isOwner = movement.userId === req.auth.user.id;
 
   if (!isAdmin && !isOwner) {
-    res.status(403).json({ message: 'Forbidden' });
+    res.status(403).json({
+      message: 'Forbidden - You can only modify your own movements',
+      code: 'NOT_OWNER',
+    });
     return;
   }
 
   if (req.method === 'PATCH') {
-    const { concept, amount, date, type } = req.body as UpdateMovementBody;
-
-    const data: {
-      concept?: string;
-      amount?: number;
-      date?: Date;
-      type?: 'INCOME' | 'EXPENSE';
-    } = {};
-
-    if (concept !== undefined) {
-      if (typeof concept !== 'string' || concept.trim().length === 0) {
-        res.status(400).json({ message: 'Concept must be a non-empty string' });
-        return;
-      }
-      data.concept = concept.trim();
-    }
-
-    if (amount !== undefined) {
-      const numericAmount = parseNumber(amount);
-      if (numericAmount === null) {
-        res.status(400).json({ message: 'Amount must be a valid number' });
-        return;
-      }
-      data.amount = numericAmount;
-    }
-
-    if (date !== undefined) {
-      const parsedDate = parseDate(date);
-      if (!parsedDate) {
-        res.status(400).json({ message: 'Date must be a valid ISO string' });
-        return;
-      }
-      data.date = parsedDate;
-    }
-
-    if (type !== undefined) {
-      if (type === 'INCOME' || type === 'EXPENSE') {
-        data.type = type;
-      } else {
-        res.status(400).json({ message: 'Type must be INCOME or EXPENSE' });
-        return;
-      }
-    }
-
-    if (Object.keys(data).length === 0) {
-      res.status(400).json({ message: 'No valid fields to update' });
-      return;
-    }
-
-    const updatedMovement = await prisma.movement.update({
-      where: { id: movementId },
-      data,
-    });
-
-    res.status(200).json(updatedMovement);
+    await handlePatch(movementId, req.body, res);
     return;
   }
 
   // DELETE
-  await prisma.movement.delete({
-    where: { id: movementId },
-  });
-
-  res.status(204).end();
+  await handleDelete(movementId, res);
 };
 
 export default withAuth(handler);

@@ -122,7 +122,9 @@ describe('GET /api/movements RBAC', () => {
 
     await handler(req, res);
 
-    expect(prismaMock.movement.count).toHaveBeenCalledWith({ where: undefined });
+    expect(prismaMock.movement.count).toHaveBeenCalledWith({
+      where: undefined,
+    });
     expect(prismaMock.movement.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: undefined })
     );
@@ -153,9 +155,51 @@ describe('GET /api/movements RBAC', () => {
     expect(body.data).toEqual([]);
     expect(body.pagination.total).toBe(0);
   });
+
+  it('enforces maximum page size limit', async () => {
+    const req = {
+      method: 'GET',
+      query: { limit: '99999' }, // Try to request excessive limit
+      auth: {
+        user: { id: 'user-1', role: 'USER' },
+      },
+    } as unknown as NextApiRequest;
+
+    prismaMock.movement.count.mockResolvedValueOnce(0);
+    prismaMock.movement.findMany.mockResolvedValueOnce([]);
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    // Should be capped at 100
+    expect(prismaMock.movement.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 100 })
+    );
+  });
+
+  it('enforces minimum page number', async () => {
+    const req = {
+      method: 'GET',
+      query: { page: '-5' }, // Invalid negative page
+      auth: {
+        user: { id: 'user-1', role: 'USER' },
+      },
+    } as unknown as NextApiRequest;
+
+    prismaMock.movement.count.mockResolvedValueOnce(0);
+    prismaMock.movement.findMany.mockResolvedValueOnce([]);
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    const body = (res.json as jest.Mock).mock.calls[0][0];
+    expect(body.pagination.page).toBe(1); // Should default to 1
+  });
 });
 
-describe('POST /api/movements RBAC and validation', () => {
+describe('POST /api/movements - RBAC and validation', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -204,6 +248,49 @@ describe('POST /api/movements RBAC and validation', () => {
     expect(prismaMock.movement.create).not.toHaveBeenCalled();
   });
 
+  it('ADMIN user successfully creates a movement with valid data', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        concept: 'Salary',
+        amount: 1000,
+        date: '2025-01-01T00:00:00.000Z',
+        type: 'INCOME',
+      },
+      auth: {
+        user: { id: 'admin-1', role: 'ADMIN' },
+      },
+    } as unknown as NextApiRequest;
+
+    const movement = {
+      id: 'movement-1',
+      concept: 'Salary',
+      amount: 1000,
+      date: new Date('2025-01-01T00:00:00.000Z'),
+      type: 'INCOME',
+      userId: 'admin-1',
+    };
+
+    prismaMock.movement.create.mockResolvedValueOnce(movement);
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    expect(prismaMock.movement.create).toHaveBeenCalledWith({
+      data: {
+        concept: 'Salary',
+        amount: 1000,
+        type: 'INCOME',
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        userId: 'admin-1',
+      },
+    });
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(movement);
+  });
+
   it('ADMIN user successfully creates a movement associated to themselves', async () => {
     const req = {
       method: 'POST',
@@ -245,6 +332,32 @@ describe('POST /api/movements RBAC and validation', () => {
 
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(created);
+  });
+
+  it('returns 400 on validation error (empty concept)', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        concept: '',
+        amount: 1000,
+        date: '2025-01-01T00:00:00.000Z',
+        type: 'INCOME',
+      },
+      auth: {
+        user: { id: 'admin-1', role: 'ADMIN' },
+      },
+    } as unknown as NextApiRequest;
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Validation error',
+      errors: expect.anything(),
+    });
+    expect(prismaMock.movement.create).not.toHaveBeenCalled();
   });
 
   it('validates required fields: concept, amount, date, type', async () => {
@@ -385,20 +498,120 @@ describe('POST /api/movements RBAC and validation', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
-      message: 'Type must be INCOME or EXPENSE',
+      message: 'Validation error',
+      errors: expect.anything(),
     });
     expect(prismaMock.movement.create).not.toHaveBeenCalled();
   });
+
+  it('rejects XSS attempts in concept field', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        concept: '<script>alert("XSS")</script>',
+        amount: 100,
+        date: '2025-01-01T00:00:00.000Z',
+        type: 'INCOME',
+      },
+      auth: {
+        user: { id: 'admin-1', role: 'ADMIN' },
+      },
+    } as unknown as NextApiRequest;
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Validation error',
+      errors: expect.anything(),
+    });
+    expect(prismaMock.movement.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects excessive amount values', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        concept: 'Test',
+        amount: 9999999999, // Exceeds max
+        date: '2025-01-01T00:00:00.000Z',
+        type: 'INCOME',
+      },
+      auth: {
+        user: { id: 'admin-1', role: 'ADMIN' },
+      },
+    } as unknown as NextApiRequest;
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Validation error',
+      errors: expect.anything(),
+    });
+    expect(prismaMock.movement.create).not.toHaveBeenCalled();
+  });
+
+  it('trims whitespace from concept field', async () => {
+    const req = {
+      method: 'POST',
+      body: {
+        concept: '  Salary  ',
+        amount: 1000,
+        date: '2025-01-01T00:00:00.000Z',
+        type: 'INCOME',
+      },
+      auth: {
+        user: { id: 'admin-1', role: 'ADMIN' },
+      },
+    } as unknown as NextApiRequest;
+
+    const movement = {
+      id: 'movement-1',
+      concept: 'Salary',
+      amount: 1000,
+      date: new Date('2025-01-01T00:00:00.000Z'),
+      type: 'INCOME',
+      userId: 'admin-1',
+    };
+
+    prismaMock.movement.create.mockResolvedValueOnce(movement);
+
+    const res = createMockRes();
+
+    await handler(req, res);
+
+    expect(prismaMock.movement.create).toHaveBeenCalledWith({
+      data: {
+        concept: 'Salary', // Trimmed
+        amount: 1000,
+        type: 'INCOME',
+        date: new Date('2025-01-01T00:00:00.000Z'),
+        userId: 'admin-1',
+      },
+    });
+
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
 });
 
-describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
+describe('PATCH/DELETE /api/movements/[id] - RBAC and behavior', () => {
   const baseMovement = {
     id: 'movement-1',
     concept: 'Original',
     amount: 100,
     date: new Date('2025-01-01T00:00:00.000Z'),
-    type: 'INCOME',
+    type: 'INCOME' as const,
     userId: 'owner-1',
+  };
+
+  // Helper para mockear la verificación de rol desde BD
+  const mockUserRole = (userId: string, role: 'USER' | 'ADMIN') => {
+    prismaMock.user.findUnique.mockResolvedValueOnce({ role } as any);
   };
 
   beforeEach(() => {
@@ -445,7 +658,7 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     expect(res.json).toHaveBeenCalledWith({ message: 'Movement not found' });
   });
 
-  it('returns 403 when authenticated user is neither owner nor ADMIN', async () => {
+  it('returns 403 when USER tries to modify movement from another user', async () => {
     const req = {
       method: 'PATCH',
       query: { id: baseMovement.id },
@@ -456,17 +669,21 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     } as unknown as NextApiRequest;
 
     prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('another-user', 'USER'); // Mock BD devuelve USER
 
     const res = createMockRes();
 
     await byIdHandler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Forbidden' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Forbidden - You can only modify your own movements',
+      code: 'NOT_OWNER',
+    });
     expect(prismaMock.movement.update).not.toHaveBeenCalled();
   });
 
-  it('allows OWNER to PATCH their movement', async () => {
+  it('allows OWNER (USER) to PATCH their own movement', async () => {
     const req = {
       method: 'PATCH',
       query: { id: baseMovement.id },
@@ -477,6 +694,7 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     } as unknown as NextApiRequest;
 
     prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('owner-1', 'USER'); // Mock BD devuelve USER
 
     const updated = {
       ...baseMovement,
@@ -507,6 +725,7 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     } as unknown as NextApiRequest;
 
     prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('admin-1', 'ADMIN'); // Mock BD devuelve ADMIN
 
     const updated = {
       ...baseMovement,
@@ -537,6 +756,7 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     } as unknown as NextApiRequest;
 
     prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('admin-1', 'ADMIN'); // Mock BD devuelve ADMIN
 
     const res = createMockRes();
 
@@ -544,12 +764,37 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
-      message: 'Amount must be a valid number',
+      message: 'Validation error',
+      errors: expect.anything(),
     });
     expect(prismaMock.movement.update).not.toHaveBeenCalled();
   });
 
-  it('OWNER can DELETE their movement', async () => {
+  it('returns 403 when USER tries to DELETE movement from another user', async () => {
+    const req = {
+      method: 'DELETE',
+      query: { id: baseMovement.id },
+      auth: {
+        user: { id: 'another-user', role: 'USER' },
+      },
+    } as unknown as NextApiRequest;
+
+    prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('another-user', 'USER'); // Mock BD devuelve USER
+
+    const res = createMockRes();
+
+    await byIdHandler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Forbidden - You can only modify your own movements',
+      code: 'NOT_OWNER',
+    });
+    expect(prismaMock.movement.delete).not.toHaveBeenCalled();
+  });
+
+  it('allows OWNER (USER) to DELETE their own movement', async () => {
     const req = {
       method: 'DELETE',
       query: { id: baseMovement.id },
@@ -559,6 +804,7 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     } as unknown as NextApiRequest;
 
     prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('owner-1', 'USER'); // Mock BD devuelve USER
 
     const res = createMockRes();
 
@@ -580,6 +826,7 @@ describe('PATCH/DELETE /api/movements/[id] RBAC and behavior', () => {
     } as unknown as NextApiRequest;
 
     prismaMock.movement.findUnique.mockResolvedValueOnce(baseMovement);
+    mockUserRole('admin-1', 'ADMIN'); // Mock BD devuelve ADMIN
 
     const res = createMockRes();
 

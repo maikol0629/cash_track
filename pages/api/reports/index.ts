@@ -30,6 +30,9 @@ interface MonthlyAggregate {
  *                   type: number
  *                 balance:
  *                   type: number
+ *                 totalMovements:
+ *                   type: number
+ *                   description: Número total de movimientos en la base de datos
  *                 monthly:
  *                   type: array
  *                   items:
@@ -52,6 +55,9 @@ const handler = async (
   _req: AuthenticatedRequest,
   res: NextApiResponse
 ): Promise<void> => {
+  // Obtiene el total de movimientos para advertencia de límite CSV
+  const totalCount = await prisma.movement.count();
+
   // Obtiene todos los movimientos para calcular totales y agregados mensuales
   const movements = await prisma.movement.findMany({
     select: {
@@ -106,6 +112,7 @@ const handler = async (
     totalExpense,
     balance,
     monthly,
+    totalMovements: totalCount,
   });
 };
 

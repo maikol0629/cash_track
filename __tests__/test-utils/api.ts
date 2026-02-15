@@ -1,4 +1,11 @@
 import type { NextApiResponse } from 'next';
+import type { AuthenticatedRequest } from '@/lib/auth';
+
+// Type-safe mock handler for authentication middleware
+type MockHandler = (
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+) => void | Promise<void>;
 
 // Central Prisma mock used across API tests
 export const prismaMock = {
@@ -24,19 +31,20 @@ jest.mock('@/lib/db', () => ({
 }));
 
 jest.mock('@/lib/auth', () => {
-  const withAuth = (innerHandler: any) => (req: any, res: any) => {
-    if (!req.auth || !req.auth.user) {
-      res.status(401).json({ message: 'Unauthorized' });
-      return;
-    }
-    return innerHandler(req, res);
-  };
+  const withAuth =
+    (innerHandler: MockHandler) => (req: any, res: NextApiResponse) => {
+      if (!req.auth?.user) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+      }
+      return innerHandler(req, res);
+    };
 
-  const withRole = (roles: string[] | string, innerHandler: any) => {
+  const withRole = (roles: string[] | string, innerHandler: MockHandler) => {
     const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-    return (req: any, res: any) => {
-      if (!req.auth || !req.auth.user) {
+    return (req: any, res: NextApiResponse) => {
+      if (!req.auth?.user) {
         res.status(401).json({ message: 'Unauthorized' });
         return;
       }

@@ -84,9 +84,13 @@ export const MovementEditModal = ({
       });
 
       if (!res.ok) {
+        const error = await res.json().catch(() => ({
+          message: 'No se pudo actualizar el movimiento',
+        }));
+
         toast({
           title: 'Error al actualizar',
-          description: 'No se pudo actualizar el movimiento.',
+          description: error.message || 'No se pudo actualizar el movimiento.',
           variant: 'destructive',
         });
         return;
@@ -100,10 +104,15 @@ export const MovementEditModal = ({
 
       onUpdated?.();
       onOpenChange(false);
-    } catch {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo conectar con el servidor';
+
       toast({
-        title: 'Error inesperado',
-        description: 'Ocurrió un error al actualizar el movimiento.',
+        title: 'Error',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -147,11 +156,11 @@ export const MovementEditModal = ({
           <div className='flex gap-4 text-sm'>
             <label className='inline-flex items-center gap-1'>
               <input type='radio' value='INCOME' {...form.register('type')} />
-              Ingreso
+              <span>Ingreso</span>
             </label>
             <label className='inline-flex items-center gap-1'>
               <input type='radio' value='EXPENSE' {...form.register('type')} />
-              Egreso
+              <span>Egreso</span>
             </label>
           </div>
         </FormField>

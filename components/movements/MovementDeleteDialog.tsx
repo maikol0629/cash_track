@@ -15,6 +15,7 @@ interface MovementForDelete {
   id: string;
   concept: string;
   amount: number;
+  type: 'INCOME' | 'EXPENSE';
 }
 
 interface MovementDeleteDialogProps {
@@ -73,11 +74,9 @@ export const MovementDeleteDialog = ({
       <AlertDialogHeader>
         <AlertDialogTitle>¿Eliminar movimiento?</AlertDialogTitle>
         <AlertDialogDescription>
-          Se eliminará el movimiento &quot;{movement.concept}&quot; por{' '}
-          {movement.amount < 0
-            ? movement.amount.toFixed(2)
-            : movement.amount.toFixed(2)}
-          . Esta acción no se puede deshacer.
+          Se eliminará el movimiento &quot;{movement.concept}&quot; por $
+          {movement.type === 'EXPENSE' ? '-' : ''}
+          {Number(movement.amount) * -1}. Esta acción no se puede deshacer.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

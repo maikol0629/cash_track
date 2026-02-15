@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Form, FormField, FormActions } from '@/components/ui/form';
 import { Save, X } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 // Esquema de validación del formulario de creación de movimiento
 const schema = z.object({
@@ -47,6 +48,8 @@ export const MovementFormModal = ({
     formState: { errors },
   } = form;
 
+  const { toast } = useToast();
+
   // Envía el formulario al backend y cierra el modal al crear correctamente
   const handleSubmit = async (values: MovementFormValues) => {
     setIsSubmitting(true);
@@ -65,14 +68,38 @@ export const MovementFormModal = ({
       });
 
       if (!res.ok) {
-        // eslint-disable-next-line no-console
-        console.error('Error al crear movimiento');
+        const error = await res.json().catch(() => ({
+          message: 'Error al crear el movimiento',
+        }));
+
+        toast({
+          title: 'Error',
+          description: error.message || 'No se pudo crear el movimiento',
+          variant: 'destructive',
+        });
         return;
       }
+
+      toast({
+        title: 'Éxito',
+        description: 'Movimiento creado correctamente',
+        variant: 'success',
+      });
 
       form.reset();
       onOpenChange(false);
       onCreated?.();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo conectar con el servidor';
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -114,11 +141,11 @@ export const MovementFormModal = ({
           <div className='flex gap-4 text-sm'>
             <label className='inline-flex items-center gap-1'>
               <input type='radio' value='INCOME' {...form.register('type')} />
-              Ingreso
+              <span>Ingreso</span>
             </label>
             <label className='inline-flex items-center gap-1'>
               <input type='radio' value='EXPENSE' {...form.register('type')} />
-              Egreso
+              <span>Egreso</span>
             </label>
           </div>
         </FormField>

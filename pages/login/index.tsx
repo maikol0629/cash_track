@@ -24,7 +24,7 @@ const LoginPage = () => {
       }
 
       if (data?.url) {
-        window.location.href = data.url;
+        globalThis.location.href = data.url;
       }
     } catch (error) {
       // eslint-disable-next-line no-console

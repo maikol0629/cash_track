@@ -1,7 +1,9 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react';
@@ -36,7 +38,8 @@ export const CurrentUserProvider = ({ children }: CurrentUserProviderProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadUser = async () => {
+  // ✅ useCallback: la función loadUser mantiene la misma referencia entre renders
+  const loadUser = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -60,18 +63,22 @@ export const CurrentUserProvider = ({ children }: CurrentUserProviderProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []); // ← Sin dependencias porque solo usa setters (que son estables)
 
   useEffect(() => {
     void loadUser();
-  }, []);
+  }, [loadUser]); // ← Ahora loadUser es una dependencia estable
 
-  const value: CurrentUserContextValue = {
-    user,
-    isLoading,
-    error,
-    refetch: loadUser,
-  };
+  // useMemo: el objeto value solo se recrea cuando cambian sus dependencias
+  const value: CurrentUserContextValue = useMemo(
+    () => ({
+      user,
+      isLoading,
+      error,
+      refetch: loadUser,
+    }),
+    [user, isLoading, error, loadUser] // ← Solo se recrea si estos cambian
+  );
 
   return (
     <CurrentUserContext.Provider value={value}>

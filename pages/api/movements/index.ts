@@ -1,18 +1,37 @@
 import type { NextApiResponse } from 'next';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { withAuth, type AuthenticatedRequest } from '@/lib/auth';
+import { withAuth, withRole, type AuthenticatedRequest } from '@/lib/auth';
 
 interface TransactionsQuery {
   page?: string | string[];
   limit?: string | string[];
 }
 
-interface CreateTransactionBody {
-  concept?: unknown;
-  amount?: unknown;
-  date?: unknown;
-  type?: unknown;
-}
+// Schema de validación Zod para crear movimientos
+const createMovementSchema = z.object({
+  concept: z
+    .string()
+    .min(1, 'Concept is required')
+    .max(200, 'Concept too long')
+    .transform((val) => val.trim())
+    .refine((val) => !/[<>]/.test(val), {
+      message: 'Concept cannot contain HTML tags',
+    }),
+  amount: z
+    .number()
+    .positive('Amount must be positive')
+    .max(999999999, 'Amount exceeds maximum allowed value')
+    .refine((val) => Number.isSafeInteger(val * 100), {
+      message: 'Amount must be a valid monetary value',
+    }),
+  date: z.string().refine((val) => !Number.isNaN(Date.parse(val)), {
+    message: 'Invalid date format',
+  }),
+  type: z.enum(['INCOME', 'EXPENSE'], {
+    message: 'Type must be INCOME or EXPENSE',
+  }),
+});
 
 /**
  * @swagger
@@ -116,30 +135,20 @@ interface CreateTransactionBody {
  *         description: No autenticado.
  */
 
-const parseNumber = (value: unknown): number | null => {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-};
-
-const parseDate = (value: unknown): Date | null => {
-  if (typeof value !== 'string') return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const handler = async (
+const getHandler = async (
   req: AuthenticatedRequest,
   res: NextApiResponse
 ): Promise<void> => {
   if (req.method === 'GET') {
     const { page = '1', limit = '10' } = req.query as TransactionsQuery;
 
-    const pageNumber = Number(Array.isArray(page) ? page[0] : page) || 1;
-    const pageSize = Number(Array.isArray(limit) ? limit[0] : limit) || 10;
+    const pageNumber = Math.max(
+      1,
+      Number(Array.isArray(page) ? page[0] : page) || 1
+    );
+    const requestedPageSize =
+      Number(Array.isArray(limit) ? limit[0] : limit) || 10;
+    const pageSize = Math.min(100, Math.max(1, requestedPageSize)); // Max 100 items per page
 
     const skip = (pageNumber - 1) * pageSize;
 
@@ -180,57 +189,57 @@ const handler = async (
     return;
   }
 
-  if (req.method === 'POST') {
-    const { concept, amount, date, type } = req.body as CreateTransactionBody;
+  res.setHeader('Allow', 'GET, POST');
+  res.status(405).end('Method Not Allowed');
+};
 
-    if (typeof concept !== 'string' || concept.trim().length === 0) {
-      res.status(400).json({ message: 'Concept is required' });
-      return;
-    }
+const postHandler = async (
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+): Promise<void> => {
+  // Validar con Zod
+  const validation = createMovementSchema.safeParse(req.body);
 
-    if (req.auth.user.role !== 'ADMIN') {
-      res.status(403).json({ message: 'Forbidden' });
-      return;
-    }
+  if (!validation.success) {
+    res.status(400).json({
+      message: 'Validation error',
+      errors: validation.error.issues,
+    });
+    return;
+  }
 
-    const numericAmount = parseNumber(amount);
-    if (numericAmount === null) {
-      res.status(400).json({ message: 'Amount must be a valid number' });
-      return;
-    }
+  const { concept, amount, date, type } = validation.data;
 
-    if (numericAmount <= 0) {
-      res.status(400).json({ message: 'Amount must be greater than 0' });
-      return;
-    }
-
-    const parsedDate = parseDate(date);
-    if (!parsedDate) {
-      res.status(400).json({ message: 'Date must be a valid ISO string' });
-      return;
-    }
-
-    const movementTypeValue =
-      typeof type === 'string' && (type === 'INCOME' || type === 'EXPENSE')
-        ? (type as 'INCOME' | 'EXPENSE')
-        : null;
-
-    if (!movementTypeValue) {
-      res.status(400).json({ message: 'Type must be INCOME or EXPENSE' });
-      return;
-    }
-
+  try {
     const movement = await prisma.movement.create({
       data: {
         concept: concept.trim(),
-        amount: numericAmount,
-        type: movementTypeValue,
-        date: parsedDate,
+        amount,
+        type,
+        date: new Date(date),
         userId: req.auth.user.id,
       },
     });
 
     res.status(201).json(movement);
+  } catch {
+    res.status(500).json({
+      message: 'Internal server error',
+      code: 'DATABASE_ERROR',
+    });
+  }
+};
+
+const handler = async (
+  req: AuthenticatedRequest,
+  res: NextApiResponse
+): Promise<void> => {
+  if (req.method === 'GET') {
+    return getHandler(req, res);
+  }
+
+  if (req.method === 'POST') {
+    await withRole('ADMIN', postHandler)(req, res);
     return;
   }
 
