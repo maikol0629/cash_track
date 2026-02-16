@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest"
+    "test": "jest",
+    "swagger:generate": "node scripts/generate-openapi.cjs",
+    "prebuild": "npm run swagger:generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -21,7 +23,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.71.1",
     "recharts": "^3.7.0",
-    "swagger-jsdoc": "^6.2.8",
+    
     "swagger-ui-react": "^5.31.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -48,6 +50,7 @@
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.17",
     "ts-jest": "^29.3.4",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "swagger-jsdoc": "^6.2.8"
   }
 }

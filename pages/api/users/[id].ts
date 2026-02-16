@@ -82,6 +82,8 @@ interface UpdateUserBody {
  *         description: No autorizado, se requiere rol ADMIN.
  *       405:
  *         description: Método no permitido.
+ *       500:
+ *         description: Error interno del servidor.
  *   delete:
  *     summary: Eliminar un usuario
  *     description: Elimina un usuario. No permite eliminar al último usuario con rol ADMIN.
@@ -132,6 +134,8 @@ interface UpdateUserBody {
  *               message: "User not found"
  *       405:
  *         description: Método no permitido.
+ *       500:
+ *         description: Error interno del servidor.
  */
 
 const handlePatch = async (

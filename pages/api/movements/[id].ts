@@ -154,6 +154,8 @@ const updateMovementSchema = z
  *               message: "Movement not found"
  *       405:
  *         description: Método no permitido.
+ *       500:
+ *         description: Error interno del servidor.
  *   delete:
  *     summary: Eliminar un movimiento
  *     description: Elimina un movimiento existente. Los administradores pueden eliminar cualquier movimiento, los usuarios solo sus propios movimientos.
@@ -212,6 +214,8 @@ const updateMovementSchema = z
  *               message: "Movement not found"
  *       405:
  *         description: Método no permitido.
+ *       500:
+ *         description: Error interno del servidor.
  */
 
 const handlePatch = async (

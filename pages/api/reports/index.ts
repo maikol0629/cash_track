@@ -49,6 +49,8 @@ interface MonthlyAggregate {
  *         description: No autenticado.
  *       403:
  *         description: No autorizado, se requiere rol ADMIN.
+ *       500:
+ *         description: Error interno del servidor.
  */
 
 const handler = async (
