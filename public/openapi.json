@@ -1,0 +1,952 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Cash Track API",
+    "version": "1.0.0",
+    "description": "API de gestión de movimientos, usuarios y reportes para la prueba técnica."
+  },
+  "paths": {
+    "/api/docs": {
+      "get": {
+        "summary": "Obtener especificación OpenAPI",
+        "description": "Devuelve el documento OpenAPI generado a partir de las anotaciones Swagger de la API.",
+        "tags": [
+          "Docs"
+        ],
+        "responses": {
+          "200": {
+            "description": "Especificación OpenAPI en formato JSON.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Objeto de especificación OpenAPI 3.0."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "summary": "Obtener el usuario autenticado",
+        "description": "Devuelve la información del usuario asociado al token de sesión actual.",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Información del usuario autenticado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "USER",
+                        "ADMIN"
+                      ]
+                    },
+                    "image": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado. Es necesario iniciar sesión."
+          },
+          "404": {
+            "description": "El usuario autenticado no existe en la base de datos."
+          }
+        }
+      }
+    },
+    "/api/movements/{id}": {
+      "patch": {
+        "summary": "Actualizar un movimiento",
+        "description": "Actualiza los campos de un movimiento existente (concepto, monto, fecha y tipo). Los administradores pueden editar cualquier movimiento, los usuarios solo sus propios movimientos.",
+        "tags": [
+          "Movements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del movimiento a actualizar."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "concept": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "INCOME",
+                      "EXPENSE"
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "concept": "Pago actualizado",
+                "amount": 2000.75,
+                "date": "2025-01-20T00:00:00.000Z",
+                "type": "INCOME"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Movimiento actualizado correctamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "concept": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "INCOME",
+                        "EXPENSE"
+                      ]
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "example": {
+                  "id": "mv_123",
+                  "concept": "Pago actualizado",
+                  "amount": 2000.75,
+                  "type": "INCOME",
+                  "date": "2025-01-20T00:00:00.000Z",
+                  "userId": "user_123",
+                  "createdAt": "2025-01-10T12:00:00.000Z",
+                  "updatedAt": "2025-01-20T12:00:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o sin campos a actualizar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "No valid fields to update"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado para modificar este movimiento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "notOwner": {
+                    "summary": "Usuario intenta editar movimiento de otro",
+                    "value": {
+                      "message": "Forbidden - You can only modify your own movements",
+                      "code": "NOT_OWNER"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Movimiento no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Movement not found"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método no permitido."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar un movimiento",
+        "description": "Elimina un movimiento existente. Los administradores pueden eliminar cualquier movimiento, los usuarios solo sus propios movimientos.",
+        "tags": [
+          "Movements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del movimiento a eliminar."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Movimiento eliminado correctamente."
+          },
+          "400": {
+            "description": "Identificador de movimiento inválido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Invalid movement id"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado para eliminar este movimiento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "notOwner": {
+                    "summary": "Usuario intenta eliminar movimiento de otro",
+                    "value": {
+                      "message": "Forbidden - You can only modify your own movements",
+                      "code": "NOT_OWNER"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Movimiento no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Movement not found"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método no permitido."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      }
+    },
+    "/api/movements": {
+      "get": {
+        "summary": "Listar movimientos financieros",
+        "description": "Devuelve una lista paginada de movimientos (ingresos y egresos). Los administradores ven todos los movimientos, los usuarios solo los propios.",
+        "tags": [
+          "Movements"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Número de página para la paginación."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Cantidad de elementos por página."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada de movimientos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "concept": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "number"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "INCOME",
+                              "EXPENSE"
+                            ]
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "userId": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "user": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "email": {
+                                "type": "string",
+                                "format": "email"
+                              },
+                              "phone": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "role": {
+                                "type": "string",
+                                "enum": [
+                                  "USER",
+                                  "ADMIN"
+                                ]
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "page": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear un nuevo movimiento",
+        "description": "Crea un nuevo ingreso o egreso asociado al usuario autenticado.",
+        "tags": [
+          "Movements"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "concept",
+                  "amount",
+                  "date",
+                  "type"
+                ],
+                "properties": {
+                  "concept": {
+                    "type": "string"
+                  },
+                  "amount": {
+                    "type": "number"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "INCOME",
+                      "EXPENSE"
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "concept": "Pago de salario",
+                "amount": 1500.5,
+                "date": "2025-01-15T00:00:00.000Z",
+                "type": "INCOME"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Movimiento creado correctamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "concept": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "INCOME",
+                        "EXPENSE"
+                      ]
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos en la solicitud."
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado, se requiere rol ADMIN."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      }
+    },
+    "/api/reports/csv": {
+      "get": {
+        "summary": "Exportar movimientos a CSV",
+        "description": "Descarga los movimientos en formato CSV (máximo 10,000 registros más recientes). Solo disponible para administradores.",
+        "tags": [
+          "Reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo CSV con todos los movimientos.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "example": "ID,Concepto,Monto,Tipo,Fecha,Usuario\n123,Pago salario,1500.50,INCOME,2025-01-15,user@example.com\n"
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado, se requiere rol ADMIN."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "get": {
+        "summary": "Obtener reporte financiero",
+        "description": "Devuelve totales de ingresos, egresos, balance y agregados mensuales. Solo disponible para administradores.",
+        "tags": [
+          "Reports"
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumen financiero.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalIncome": {
+                      "type": "number"
+                    },
+                    "totalExpense": {
+                      "type": "number"
+                    },
+                    "balance": {
+                      "type": "number"
+                    },
+                    "totalMovements": {
+                      "type": "number",
+                      "description": "Número total de movimientos en la base de datos"
+                    },
+                    "monthly": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": {
+                            "type": "string",
+                            "example": "2025-01"
+                          },
+                          "income": {
+                            "type": "number"
+                          },
+                          "expense": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado, se requiere rol ADMIN."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "patch": {
+        "summary": "Actualizar un usuario",
+        "description": "Actualiza el nombre y/o el rol de un usuario. Solo disponible para administradores.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del usuario a actualizar."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "USER",
+                      "ADMIN"
+                    ]
+                  }
+                }
+              },
+              "example": {
+                "name": "Juan Pérez",
+                "role": "ADMIN"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado correctamente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "USER",
+                        "ADMIN"
+                      ]
+                    }
+                  }
+                },
+                "example": {
+                  "id": "user_123",
+                  "name": "Juan Pérez",
+                  "email": "juan@example.com",
+                  "phone": "+57 3001234567",
+                  "role": "ADMIN"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos o sin campos a actualizar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "No valid fields to update"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado, se requiere rol ADMIN."
+          },
+          "405": {
+            "description": "Método no permitido."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar un usuario",
+        "description": "Elimina un usuario. No permite eliminar al último usuario con rol ADMIN.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID del usuario a eliminar."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Usuario eliminado correctamente."
+          },
+          "400": {
+            "description": "No se puede eliminar al último administrador o identificador inválido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "examples": {
+                  "lastAdmin": {
+                    "summary": "Último administrador",
+                    "value": {
+                      "message": "Cannot delete the last admin user"
+                    }
+                  },
+                  "invalidId": {
+                    "summary": "ID inválido",
+                    "value": {
+                      "message": "Invalid user id"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado, se requiere rol ADMIN."
+          },
+          "404": {
+            "description": "Usuario no encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "User not found"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método no permitido."
+          },
+          "500": {
+            "description": "Error interno del servidor."
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "summary": "Listar usuarios",
+        "description": "Devuelve la lista de usuarios. Solo disponible para administradores.",
+        "tags": [
+          "Users"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "email": {
+                        "type": "string"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "USER",
+                          "ADMIN"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado."
+          },
+          "403": {
+            "description": "No autorizado, se requiere rol ADMIN."
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": []
+}

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { swaggerSpec } from '@/lib/swagger';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * @swagger
@@ -22,6 +23,16 @@ export default function handler(
   _req: NextApiRequest,
   res: NextApiResponse
 ): void {
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).send(swaggerSpec);
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'openapi.json');
+    const fileContents = fs.readFileSync(filePath, 'utf8');
+    const spec = JSON.parse(fileContents);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).json(spec);
+  } catch {
+    res.status(500).json({
+      message: 'OpenAPI spec no disponible. Ejecuta el build primero.',
+    });
+  }
 }

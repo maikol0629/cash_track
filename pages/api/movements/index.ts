@@ -38,7 +38,7 @@ const createMovementSchema = z.object({
  * /api/movements:
  *   get:
  *     summary: Listar movimientos financieros
- *     description: Devuelve una lista paginada de movimientos (ingresos y egresos).
+ *     description: Devuelve una lista paginada de movimientos (ingresos y egresos). Los administradores ven todos los movimientos, los usuarios solo los propios.
  *     tags:
  *       - Movements
  *     parameters:
@@ -81,6 +81,29 @@ const createMovementSchema = z.object({
  *                         format: date-time
  *                       userId:
  *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *                         format: date-time
+ *                       updatedAt:
+ *                         type: string
+ *                         format: date-time
+ *                       user:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                             nullable: true
+ *                           email:
+ *                             type: string
+ *                             format: email
+ *                           phone:
+ *                             type: string
+ *                             nullable: true
+ *                           role:
+ *                             type: string
+ *                             enum: [USER, ADMIN]
  *                 pagination:
  *                   type: object
  *                   properties:
@@ -94,6 +117,8 @@ const createMovementSchema = z.object({
  *                       type: integer
  *       401:
  *         description: No autenticado.
+ *       500:
+ *         description: Error interno del servidor.
  *   post:
  *     summary: Crear un nuevo movimiento
  *     description: Crea un nuevo ingreso o egreso asociado al usuario autenticado.
@@ -129,10 +154,39 @@ const createMovementSchema = z.object({
  *     responses:
  *       201:
  *         description: Movimiento creado correctamente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 concept:
+ *                   type: string
+ *                 amount:
+ *                   type: number
+ *                 type:
+ *                   type: string
+ *                   enum: [INCOME, EXPENSE]
+ *                 date:
+ *                   type: string
+ *                   format: date-time
+ *                 userId:
+ *                   type: string
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
  *       400:
  *         description: Datos inválidos en la solicitud.
  *       401:
  *         description: No autenticado.
+ *       403:
+ *         description: No autorizado, se requiere rol ADMIN.
+ *       500:
+ *         description: Error interno del servidor.
  */
 
 const getHandler = async (
