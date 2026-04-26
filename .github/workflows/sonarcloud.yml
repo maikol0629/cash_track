@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug sonar files
+        run: |
+          echo "Sonar files in project root:"
+          ls -la sonar-project.properties
       - name: Checkout code
         uses: actions/checkout@v4
         with:
