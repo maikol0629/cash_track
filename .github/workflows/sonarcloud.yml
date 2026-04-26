@@ -27,15 +27,15 @@ jobs:
       - name: Run tests with coverage
         run: npm run coverage
 
-      -- name: SonarCloud Scan
-  uses: SonarSource/sonarcloud-github-action@v2
-  with:
-    args: >
-      -Dsonar.projectKey=maikol0629_cash_track
-      -Dsonar.organization=maikol0629
-      -Dsonar.sources=.
-      -Dsonar.tests=.
-      -Dsonar.test.inclusions=**/*.test.ts
-      -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-  env:
-    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=maikol0629_cash_track
+            -Dsonar.organization=maikol0629
+            -Dsonar.sources=.
+            -Dsonar.tests=.
+            -Dsonar.test.inclusions=**/*.test.ts
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+          env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
