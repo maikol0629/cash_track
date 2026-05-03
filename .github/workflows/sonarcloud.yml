@@ -11,15 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Debug sonar files
-        run: |
-          echo "Sonar files in project root:"
-          ls -la sonar-project.properties
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # necesario para análisis completo
-
+      - name: Debug sonar files
+        run: |
+          echo "Sonar files in project root:"
+          ls -la sonar-project.properties
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,12 +33,5 @@ jobs:
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v5.0.0
         with:
-          args: >
-            -Dsonar.projectKey=maikol0629_cash_track
-            -Dsonar.organization=maikol0629
-            -Dsonar.sources=.
-            -Dsonar.tests=.
-            -Dsonar.test.inclusions=**/*.test.ts
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
           env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
