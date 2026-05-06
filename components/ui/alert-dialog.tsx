@@ -16,18 +16,20 @@ export const AlertDialog = ({
   if (!open) return null;
 
   return (
-    <div
-      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in-0'
-      onClick={() => onOpenChange(false)}
-      role='presentation'
-    >
+    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+      <button
+        type='button'
+        aria-label='Close alert dialog'
+        className='absolute inset-0 cursor-default border-0 bg-black/40 p-0 backdrop-blur-sm animate-in fade-in-0'
+        onClick={() => onOpenChange(false)}
+      />
       <div
-        className={cn(
-          'w-full max-w-md rounded-lg bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-150'
-        )}
-        onClick={(event) => event.stopPropagation()}
         role='alertdialog'
         aria-modal='true'
+        tabIndex={-1}
+        className={cn(
+          'relative z-10 w-full max-w-md rounded-lg bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-150'
+        )}
       >
         {children}
       </div>

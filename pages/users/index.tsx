@@ -47,7 +47,7 @@ const UsersPage = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState<boolean>(false);
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const formMethods = useForm<EditUserFormValues>({
     defaultValues: {
@@ -125,7 +125,7 @@ const UsersPage = () => {
 
       closeDialog();
     } catch (err) {
-      toast({
+      showToast({
         title: 'Error al actualizar',
         description:
           err instanceof Error

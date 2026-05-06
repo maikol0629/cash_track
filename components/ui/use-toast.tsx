@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 
 type ToastVariant = 'default' | 'success' | 'destructive';
 
@@ -14,6 +13,8 @@ interface Toast extends ToastOptions {
 }
 
 interface ToastContextValue {
+  toasts: Toast[];
+  showToast: (options: ToastOptions) => void;
   toast: (options: ToastOptions) => void;
 }
 
@@ -32,38 +33,31 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
 
     setToasts((prev) => [...prev, toast]);
 
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+    scheduleToastRemoval(id);
   }, []);
 
+  const scheduleToastRemoval = (id: number) => {
+    globalThis.setTimeout(() => {
+      removeToastById(id);
+    }, 3000);
+  };
+
+  const removeToastById = (id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const value = React.useMemo(
+    () => ({ toasts, showToast, toast: showToast }),
+    [toasts, showToast]
+  );
+
   return (
-    <ToastContext.Provider value={{ toast: showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
-      <div className='fixed bottom-4 right-4 z-50 flex flex-col gap-2'>
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={cn(
-              'min-w-[260px] rounded-md border bg-card px-4 py-3 text-sm shadow-lg',
-              toast.variant === 'destructive' &&
-                'border-red-500 text-red-900 dark:border-red-600',
-              toast.variant === 'success' &&
-                'border-emerald-500 text-emerald-900 dark:border-emerald-600'
-            )}
-          >
-            {toast.title && <div className='font-semibold'>{toast.title}</div>}
-            {toast.description && (
-              <div className='mt-1 text-xs text-muted-foreground'>
-                {toast.description}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
     </ToastContext.Provider>
   );
 };
+
 
 export const useToast = () => {
   const context = React.useContext(ToastContext);

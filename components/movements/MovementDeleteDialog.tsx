@@ -31,7 +31,7 @@ export const MovementDeleteDialog = ({
   movement,
   onDeleted,
 }: MovementDeleteDialogProps) => {
-  const { toast } = useToast();
+  const { showToast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirm = async () => {
@@ -42,7 +42,7 @@ export const MovementDeleteDialog = ({
       });
 
       if (!res.ok) {
-        toast({
+        showToast({
           title: 'Error al eliminar',
           description: 'No se pudo eliminar el movimiento.',
           variant: 'destructive',
@@ -50,7 +50,7 @@ export const MovementDeleteDialog = ({
         return;
       }
 
-      toast({
+      showToast({
         title: 'Movimiento eliminado',
         description: 'El movimiento se eliminó correctamente.',
         variant: 'success',
@@ -59,7 +59,7 @@ export const MovementDeleteDialog = ({
       onDeleted?.();
       onOpenChange(false);
     } catch {
-      toast({
+      showToast({
         title: 'Error inesperado',
         description: 'Ocurrió un error al eliminar el movimiento.',
         variant: 'destructive',

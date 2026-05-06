@@ -26,9 +26,10 @@ interface DropdownMenuProps {
 
 export const DropdownMenu = ({ children }: DropdownMenuProps) => {
   const [open, setOpen] = React.useState(false);
+  const value = React.useMemo(() => ({ open, setOpen }), [open]);
 
   return (
-    <DropdownMenuContext.Provider value={{ open, setOpen }}>
+    <DropdownMenuContext.Provider value={value}>
       <div className='relative inline-block text-left'>{children}</div>
     </DropdownMenuContext.Provider>
   );

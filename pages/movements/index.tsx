@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { RoleGuard } from '@/components/auth/RoleGuard';
-import { MovementsTable } from '@/components/movements/MovementsTable';
+import { MovementsTable } from '@/components/movements/table/MovementsTable';
 import { MovementFormModal } from '@/components/movements/MovementFormModal';
 
 const MovementsPage = () => {

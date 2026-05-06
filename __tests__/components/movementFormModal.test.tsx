@@ -98,4 +98,83 @@ describe('MovementFormModal', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     expect(onCreated).not.toHaveBeenCalled();
   });
+
+  it('handles network error without closing modal', async () => {
+    const { onOpenChange, onCreated } = setup();
+
+    mockFetch.mockRejectedValueOnce(new Error('network error'));
+
+    const conceptInput = screen.getByLabelText('Concepto');
+    const amountInput = screen.getByLabelText('Monto');
+    const dateInput = screen.getByLabelText('Fecha');
+    const incomeRadio = screen.getByLabelText('Ingreso');
+
+    fireEvent.change(conceptInput, { target: { value: 'Salary' } });
+    fireEvent.change(amountInput, { target: { value: '1000' } });
+    fireEvent.change(dateInput, { target: { value: '2025-01-01' } });
+    fireEvent.click(incomeRadio);
+
+    const submitButton = screen.getByRole('button', { name: 'Guardar' });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it('uses fallback API error message when error payload cannot be parsed', async () => {
+    const { onOpenChange, onCreated } = setup();
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: async () => {
+        throw new Error('invalid json');
+      },
+    });
+
+    fireEvent.change(screen.getByLabelText('Concepto'), {
+      target: { value: 'Salary' },
+    });
+    fireEvent.change(screen.getByLabelText('Monto'), {
+      target: { value: '1000' },
+    });
+    fireEvent.change(screen.getByLabelText('Fecha'), {
+      target: { value: '2025-01-01' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it('closes modal from cancel button and supports optional onCreated callback', async () => {
+    const onOpenChange = jest.fn();
+
+    renderWithProviders(<MovementFormModal open onOpenChange={onOpenChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    mockFetch.mockResolvedValueOnce({ ok: true });
+
+    fireEvent.change(screen.getByLabelText('Concepto'), {
+      target: { value: 'Salary' },
+    });
+    fireEvent.change(screen.getByLabelText('Monto'), {
+      target: { value: '1000' },
+    });
+    fireEvent.change(screen.getByLabelText('Fecha'), {
+      target: { value: '2025-01-01' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+  });
 });

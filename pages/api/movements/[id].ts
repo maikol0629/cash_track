@@ -30,12 +30,26 @@ const updateMovementSchema = z
         message: 'Amount must be a valid monetary value',
       })
       .optional(),
-    date: z.string().datetime().optional(),
+    date: z.iso.datetime().optional(),
     type: z.enum(['INCOME', 'EXPENSE']).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',
   });
+
+const mapZodErrors = (
+  issues: Array<{ path: (string | number)[]; message: string }>
+): Record<string, string[]> =>
+  issues.reduce<Record<string, string[]>>((acc, issue) => {
+    const fieldName = issue.path[0];
+
+    if (typeof fieldName === 'string') {
+      const existingErrors = acc[fieldName] ?? [];
+      acc[fieldName] = [...existingErrors, issue.message];
+    }
+
+    return acc;
+  }, {});
 
 /**
  * @swagger
@@ -228,7 +242,7 @@ const handlePatch = async (
   if (!validation.success) {
     res.status(400).json({
       message: 'Validation error',
-      errors: validation.error.flatten().fieldErrors,
+      errors: mapZodErrors(validation.error.issues),
     });
     return;
   }

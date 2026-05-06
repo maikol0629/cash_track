@@ -11,21 +11,23 @@ export const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   if (!open) return null;
 
   return (
-    <div
-      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in-0'
-      onClick={() => onOpenChange(false)}
-      role='presentation'
-    >
-      <div
-        className={cn(
-          'w-full max-w-lg rounded-lg bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-150'
-        )}
-        onClick={(e) => e.stopPropagation()}
-        role='dialog'
+    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+      <button
+        type='button'
+        aria-label='Close dialog'
+        className='absolute inset-0 cursor-default border-0 bg-black/40 p-0 backdrop-blur-sm animate-in fade-in-0'
+        onClick={() => onOpenChange(false)}
+      />
+      <dialog
+        open
         aria-modal='true'
+        tabIndex={-1}
+        className={cn(
+          'relative z-10 w-full max-w-lg rounded-lg bg-background p-6 shadow-lg animate-in fade-in-0 zoom-in-95 duration-150'
+        )}
       >
         {children}
-      </div>
+      </dialog>
     </div>
   );
 };

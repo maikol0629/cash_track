@@ -1,8 +1,8 @@
 // Script de build para generar el archivo OpenAPI estático
 // Se ejecuta antes de `next build` y NO se usa en tiempo de ejecución.
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const swaggerJSDoc = require('swagger-jsdoc');
 
 const options = {
